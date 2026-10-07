@@ -1,0 +1,46 @@
+🐄 迷客夏學府店-排班
+營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人
+👤 員工劃假 老闆排班 🔒
+排班週期：
+          上半月 (01日 - 15日)
+          下半月 (16日 - 月底)
+        
+選擇我的身分：
+           {{ s.name }} ({{ s.type === 'manager' ? '店長' : (s.type === 'full' ? '正職' : '兼職') }}) {{ isStaffAuthenticated(s.id) ? '🔓' : '🔒' }}
+         🔑 輸入密碼 鎖定身分
+管理職：{{ staffList.filter(s => s.type === 'manager').length }} 人 正職：{{ staffList.filter(s => s.type === 'full').length }} 人 兼職：{{ staffList.filter(s => s.type === 'part').length }} 人 退出管理權限
+💡 劃假提示： 請登入個人身分後選擇日期設定請假狀態。
+👑 老闆管理模式： 早班需要指派 3 位同仁，晚班需要指派 2 位同仁。已選擇的同仁不會重複選取。
+日期
+星期
+員工劃假狀態
+早班 (3位)
+晚班 (2位)
+狀態
+{{ day.dateStr }}
+週{{ day.dayOfWeek }}
+                      🟢 可排班 (正常)
+                      🔴 休假 / 劃假
+                      🟡 僅可早班
+                      🟣 僅可晚班
+                    
+🔒 請先驗證解鎖 解鎖
+{{ s.name }}: {{ getStatusText(getAvailability(s.id, day.fullDate)) }}
+                    -- 早班人選 {{ idx + 1 }} --
+                     {{ s.name }} ({{ s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼') }})
+                  
+{{ getStaffName(id) }} — 未指派 —
+                    -- 晚班人選 {{ idx + 1 }} --
+                     {{ s.name }} ({{ s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼') }})
+                  
+{{ getStaffName(id) }} — 未指派 —
+✅ 已完成 ⚠️ 人力不足 (早:{{ countAssigned(day.fullDate, 'morning') }}/3 晚:{{ countAssigned(day.fullDate, 'evening') }}/2)
+系統已自動過濾請假與劃假人員 🚀 發布本期班表
+🔑 員工身分驗證 - {{ getStaffNameById(targetStaffId) }}
+請輸入您的個人密碼：
+❌ 密碼錯誤，請重新輸入！
+取消 確認解鎖
+🔒 進入老闆模式驗證
+此區域僅限迷客夏學府店店長/老闆操作，請輸入管理密碼：
+❌ 密碼錯誤，請重新輸入！
+取消 確認解鎖
