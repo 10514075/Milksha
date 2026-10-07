@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>迷客夏學府店排班</title>
+  <title>迷客夏學府店排班系統</title>
   <!-- Vue 3 & Tailwind CSS CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
     <header class="bg-white rounded-xl shadow-md p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-          🐄 迷客夏學府店-排班
+          🐄 迷客夏學府店-排班系統
         </h1>
         <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人</p>
       </div>
@@ -79,8 +79,8 @@
         </button>
       </div>
 
-      <!-- 老闆模式下：統計資訊與登出鈕 -->
-      <div v-if="role === 'boss'" class="flex items-center gap-3 text-sm font-medium">
+      <!-- 老闆模式下：統計資訊、備份與登出鈕 -->
+      <div v-if="role === 'boss'" class="flex flex-wrap items-center gap-3 text-sm font-medium">
         <span class="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg border border-purple-200">
           管理職：{{ staffList.filter(s => s.type === 'manager').length }} 人
         </span>
@@ -90,6 +90,18 @@
         <span class="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg border border-green-200">
           兼職：{{ staffList.filter(s => s.type === 'part').length }} 人
         </span>
+
+        <!-- 資料匯出/匯入按鈕區 -->
+        <div class="flex items-center gap-2 border-l border-slate-200 pl-3 ml-1">
+          <button @click="exportData" title="下載備份檔" class="bg-slate-700 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1">
+            📥 匯出備份
+          </button>
+          <label title="還原備份檔" class="bg-slate-700 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer">
+            📤 匯入備份
+            <input type="file" accept=".json" @change="importData" class="hidden" />
+          </label>
+        </div>
+
         <button @click="logoutBoss" class="text-xs text-rose-600 hover:text-rose-800 underline ml-2">
           退出管理權限
         </button>
@@ -356,7 +368,7 @@
         const halfPeriod = ref('1');
         const currentStaffId = ref(0);
 
-        // 迷客夏學府店員工清單（加入了 id: 0 的店長，預設密碼設為 0000，您可自行調整）
+        // 迷客夏學府店員工清單
         const staffList = ref([
           { id: 0, name: '店長', type: 'manager', password: '0000' },
           { id: 1, name: '美蓁', type: 'full', password: '0212' },
@@ -383,6 +395,51 @@
         const saveData = () => {
           localStorage.setItem('milksha_avail', JSON.stringify(availability.value));
           localStorage.setItem('milksha_shifts', JSON.stringify(shifts.value));
+        };
+
+        // --- 匯出 / 匯入 備份邏輯 ---
+        const exportData = () => {
+          const backupData = {
+            version: '1.0',
+            exportedAt: new Date().toLocaleString(),
+            availability: availability.value,
+            shifts: shifts.value
+          };
+          const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.setAttribute('href', dataStr);
+          downloadAnchor.setAttribute('download', `milksha_schedule_backup_${new Date().toISOString().slice(0, 10)}.json`);
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+        };
+
+        const importData = (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const imported = JSON.parse(e.target.result);
+              if (imported.availability && imported.shifts) {
+                if (confirm('確定要匯入此備份檔嗎？這將會覆蓋目前的劃假與排班資料！')) {
+                  availability.value = imported.availability;
+                  shifts.value = imported.shifts;
+                  saveData();
+                  alert('✅ 備份資料匯入成功！');
+                  window.location.reload();
+                }
+              } else {
+                alert('❌ 備份檔格式不符，匯入失敗。');
+              }
+            } catch (err) {
+              alert('❌ 無法解析該檔案，請確認是否為有效的 JSON 備份檔。');
+            }
+          };
+          reader.readAsText(file);
+          // 清除選取以便可重複匯入同檔名檔案
+          event.target.value = '';
         };
 
         // --- 員工身分與驗證邏輯 ---
@@ -586,6 +643,9 @@
           verifyBossPassword,
           switchToStaff,
           logoutBoss,
+          // 備份匯出匯入
+          exportData,
+          importData,
           // 員工驗證相關
           authenticatedStaffIds,
           showStaffAuthModal,
