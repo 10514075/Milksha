@@ -306,14 +306,13 @@
     </div>
 
   </div>
-
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
         // ⚠️ 請把下方引號內替換成您的 Google Apps Script 部署 URL ⚠️
-        const GOOGLE_SCRIPT_URL = [https://script.google.com/macros/s/AKfycbxWyFTWzKf07IGm5c5CMcePSp_y5YThQ8vXmPjBxDx5NseGPYpAZmnm7BrHFo4k582k/exec];
+        const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
         const role = ref('staff');
         const isLoading = ref(false);
@@ -447,10 +446,12 @@
 
         const verifyStaffPassword = () => {
           const staff = staffList.value.find(s => s.id === targetStaffId.value);
-          if (staff && inputStaffPassword.value === staff.password) {
+          const pwd = String(inputStaffPassword.value || '').trim();
+          if (staff && pwd === staff.password) {
             if (!authenticatedStaffIds.value.includes(staff.id)) authenticatedStaffIds.value.push(staff.id);
             currentStaffId.value = staff.id;
             showStaffAuthModal.value = false;
+            staffAuthError.value = false;
           } else {
             staffAuthError.value = true;
           }
@@ -475,11 +476,14 @@
           }
         };
 
+        // 老闆密碼驗證（加上去除空白修復）
         const verifyBossPassword = () => {
-          if (inputPassword.value === BOSS_PASSWORD) {
+          const pwd = String(inputPassword.value || '').trim();
+          if (pwd === BOSS_PASSWORD) {
             isBossAuthenticated.value = true;
             role.value = 'boss';
             showAuthModal.value = false;
+            authError.value = false;
           } else {
             authError.value = true;
           }
@@ -551,5 +555,6 @@
       }
     }).mount('#app');
   </script>
+
 </body>
 </html>
