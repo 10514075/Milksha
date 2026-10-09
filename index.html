@@ -123,7 +123,7 @@
             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
               <th class="p-3 min-w-[100px]">日期</th>
               <th class="p-3 min-w-[70px]">星期</th>
-              <th class="p-3 min-w-[240px]">員工劃假狀態</th>
+              <th class="p-3 min-w-[260px]">員工劃假狀態 (含全員概況)</th>
               <th class="p-3 min-w-[220px]">早班 (3位)</th>
               <th class="p-3 min-w-[220px]">晚班 (2位)</th>
               <th class="p-3 min-w-[130px]">狀態</th>
@@ -141,10 +141,10 @@
                 </span>
               </td>
 
-              <!-- 劃假狀態欄 -->
+              <!-- 劃假狀態欄（直出所有人劃假概況） -->
               <td class="p-3">
-                <!-- 員工視角：編輯自己的劃假 + 顯示全員劃假概況 -->
                 <div v-if="role === 'staff'" class="space-y-2">
+                  <!-- 個人劃假操作 -->
                   <div v-if="isStaffAuthenticated(currentStaffId)">
                     <select 
                       :value="getAvailability(currentStaffId, day.fullDate)"
@@ -157,18 +157,20 @@
                       <option value="evening_only">🟣 僅可晚班</option>
                     </select>
                   </div>
-                  <div v-else class="text-xs text-slate-400 italic flex items-center justify-between bg-slate-100 p-2 rounded">
-                    <span>🔒 請先驗證解鎖個人劃假</span>
-                    <button @click="openStaffAuthModal(currentStaffId)" class="text-amber-600 font-bold hover:underline">解鎖</button>
+                  <div v-else class="text-xs text-slate-400 italic flex items-center justify-between bg-slate-100 p-1.5 rounded">
+                    <span>🔒 驗證後可修改自己劃假</span>
+                    <button @click="openStaffAuthModal(currentStaffId)" class="text-amber-600 font-bold hover:underline ml-1">解鎖</button>
                   </div>
 
-                  <!-- 全員劃假概況 -->
-                  <div class="pt-1 border-t border-slate-100">
-                    <div class="text-[10px] text-slate-400 mb-1 font-bold">👥 全員劃假概況：</div>
+                  <!-- 全員劃假概況（無論是否驗證，直接永久顯示） -->
+                  <div class="pt-1.5 border-t border-slate-200">
+                    <div class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
+                      👥 全員劃假概況：
+                    </div>
                     <div class="flex flex-wrap gap-1">
                       <span v-for="s in staffList" :key="s.id"
                             :class="getBadgeClass(getAvailability(s.id, day.fullDate))"
-                            class="text-[11px] px-1.5 py-0.5 rounded border">
+                            class="text-[11px] px-1.5 py-0.5 rounded border shadow-sm">
                         {{ s.name }}: {{ getStatusText(getAvailability(s.id, day.fullDate)) }}
                       </span>
                     </div>
