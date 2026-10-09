@@ -141,9 +141,11 @@
                 </span>
               </td>
 
-              <!-- 劃假狀態欄 -->
+                            <!-- 劃假狀態欄 -->
               <td class="p-3">
-                <div v-if="role === 'staff'">
+                <!-- 員工視角：編輯自己的劃假 + 顯示全員劃假概況 -->
+                <div v-if="role === 'staff'" class="space-y-2">
+                  <!-- 1. 自己劃假設定 -->
                   <div v-if="isStaffAuthenticated(currentStaffId)">
                     <select 
                       :value="getAvailability(currentStaffId, day.fullDate)"
@@ -157,11 +159,24 @@
                     </select>
                   </div>
                   <div v-else class="text-xs text-slate-400 italic flex items-center justify-between bg-slate-100 p-2 rounded">
-                    <span>🔒 請先驗證解鎖</span>
+                    <span>🔒 請先驗證解鎖個人劃假</span>
                     <button @click="openStaffAuthModal(currentStaffId)" class="text-amber-600 font-bold hover:underline">解鎖</button>
+                  </div>
+
+                  <!-- 2. 所有人劃假概況（新增此區塊讓員工互相查看） -->
+                  <div class="pt-1 border-t border-slate-100">
+                    <div class="text-[10px] text-slate-400 mb-1">👥 全員劃假概況：</div>
+                    <div class="flex flex-wrap gap-1">
+                      <span v-for="s in staffList" :key="s.id"
+                            :class="getBadgeClass(getAvailability(s.id, day.fullDate))"
+                            class="text-[11px] px-1.5 py-0.5 rounded border">
+                        {{ s.name }}: {{ getStatusText(getAvailability(s.id, day.fullDate)) }}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
+                <!-- 老闆視角：顯示所有人的劃假 -->
                 <div v-else class="flex flex-wrap gap-1">
                   <span v-for="s in staffList" :key="s.id"
                         :class="getBadgeClass(getAvailability(s.id, day.fullDate))"
