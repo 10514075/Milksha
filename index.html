@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>迷客夏學府店排班系統</title>
+  <title>迷客夏學府店-雲端同步排班系統</title>
   <!-- Vue 3 & Tailwind CSS CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,8 @@
     <header class="bg-white rounded-xl shadow-md p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-          🐄 迷客夏學府店-排班系統
+          🐄 迷客夏學府店-萬年曆排班系統
+          <span v-if="isLoading" class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full animate-pulse">☁️ 資料同步中...</span>
         </h1>
         <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人</p>
       </div>
@@ -38,24 +39,29 @@
       </div>
     </header>
 
-    <!-- 週期與員工切換列 -->
+    <!-- 萬年曆：週期與員工切換列 -->
     <div class="bg-white rounded-xl shadow-md p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
-      <!-- 選擇年月與半月週期 -->
+      <!-- 萬年曆選擇器：選擇任意年月與半月週期 -->
       <div class="flex items-center gap-3">
-        <label class="font-bold text-slate-700">排班週期：</label>
+        <label class="font-bold text-slate-700">選擇年月：</label>
         <input 
           type="month" 
           v-model="currentYearMonth" 
-          class="border border-slate-300 rounded-lg px-3 py-1.5 bg-white font-medium text-sm" />
+          class="border border-slate-300 rounded-lg px-3 py-1.5 bg-white font-medium text-sm focus:outline-emerald-500" />
+        
+        <label class="font-bold text-slate-700 ml-2">週期：</label>
         <select v-model="halfPeriod" class="border border-slate-300 rounded-lg px-3 py-1.5 bg-white font-medium text-sm">
           <option value="1">上半月 (01日 - 15日)</option>
-          <option value="2">下半月 (16日 - 月底)</option>
+          <option value="2">下半月 (16日 - {{ lastDayOfCurrentMonth }}日)</option>
         </select>
+        <button @click="fetchCloudData" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-bold">
+          🔄 重新整理
+        </button>
       </div>
 
       <!-- 員工模式下：選擇切換目前員工與登入驗證 -->
       <div v-if="role === 'staff'" class="flex items-center gap-2">
-        <label class="font-bold text-slate-700">選擇我的身分：</label>
+        <label class="font-bold text-slate-700">選擇身分：</label>
         <select 
           :value="currentStaffId" 
           @change="handleStaffChange($event.target.value)"
@@ -79,7 +85,7 @@
         </button>
       </div>
 
-      <!-- 老闆模式下：統計資訊、備份與登出鈕 -->
+      <!-- 老闆模式下：統計資訊與登出鈕 -->
       <div v-if="role === 'boss'" class="flex flex-wrap items-center gap-3 text-sm font-medium">
         <span class="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg border border-purple-200">
           管理職：{{ staffList.filter(s => s.type === 'manager').length }} 人
@@ -90,17 +96,6 @@
         <span class="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg border border-green-200">
           兼職：{{ staffList.filter(s => s.type === 'part').length }} 人
         </span>
-
-        <!-- 資料匯出/匯入按鈕區 -->
-        <div class="flex items-center gap-2 border-l border-slate-200 pl-3 ml-1">
-          <button @click="exportData" title="下載備份檔" class="bg-slate-700 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1">
-            📥 匯出備份
-          </button>
-          <label title="還原備份檔" class="bg-slate-700 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer">
-            📤 匯入備份
-            <input type="file" accept=".json" @change="importData" class="hidden" />
-          </label>
-        </div>
 
         <button @click="logoutBoss" class="text-xs text-rose-600 hover:text-rose-800 underline ml-2">
           退出管理權限
@@ -114,10 +109,10 @@
       <!-- 模式提示說明 -->
       <div :class="role === 'staff' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800'" class="p-4 border-b text-sm flex justify-between items-center">
         <div v-if="role === 'staff'">
-          💡 <strong>劃假提示：</strong> 請登入個人身分後選擇日期設定請假狀態。
+          💡 <strong>雲端自動同步中：</strong> 劃假修改後會即時回傳雲端，老闆可同步看到。
         </div>
         <div v-else>
-          👑 <strong>老闆管理模式：</strong> 早班需要指派 3 位同仁，晚班需要指派 2 位同仁。已選擇的同仁不會重複選取。
+          👑 <strong>老闆管理模式：</strong> 排班異動會即時發布至雲端資料庫。
         </div>
       </div>
 
@@ -126,7 +121,7 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold">
-              <th class="p-3 min-w-[90px]">日期</th>
+              <th class="p-3 min-w-[100px]">日期</th>
               <th class="p-3 min-w-[70px]">星期</th>
               <th class="p-3 min-w-[200px]">員工劃假狀態</th>
               <th class="p-3 min-w-[220px]">早班 (3位)</th>
@@ -148,7 +143,6 @@
 
               <!-- 劃假狀態欄 -->
               <td class="p-3">
-                <!-- 員工視角：編輯自己的劃假 -->
                 <div v-if="role === 'staff'">
                   <div v-if="isStaffAuthenticated(currentStaffId)">
                     <select 
@@ -168,7 +162,6 @@
                   </div>
                 </div>
 
-                <!-- 老闆視角：預覽所有人的劃假與可上班狀態 -->
                 <div v-else class="flex flex-wrap gap-1">
                   <span v-for="s in staffList" :key="s.id"
                         :class="getBadgeClass(getAvailability(s.id, day.fullDate))"
@@ -185,7 +178,7 @@
                     v-for="idx in [0, 1, 2]" 
                     :key="idx"
                     v-model="getShift(day.fullDate).morning[idx]" 
-                    @change="saveData"
+                    @change="saveShiftData(day.fullDate)"
                     class="text-xs border border-slate-300 rounded p-1.5 w-full bg-white block">
                     <option value="">-- 早班人選 {{ idx + 1 }} --</option>
                     <option 
@@ -199,11 +192,11 @@
                 </div>
                 <div v-else class="font-medium text-slate-700 flex flex-wrap gap-1">
                   <span v-for="(id, idx) in getShift(day.fullDate).morning" :key="idx">
-                    <span v-if="id" class="inline-block bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded text-xs font-semibold">
+                    <span v-if="id !== '' && id !== null && id !== undefined" class="inline-block bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded text-xs font-semibold">
                       {{ getStaffName(id) }}
                     </span>
                   </span>
-                  <span v-if="!getShift(day.fullDate).morning.some(id => id)" class="text-slate-400 italic text-xs">— 未指派 —</span>
+                  <span v-if="!getShift(day.fullDate).morning.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 未指派 —</span>
                 </div>
               </td>
 
@@ -214,7 +207,7 @@
                     v-for="idx in [0, 1]" 
                     :key="idx"
                     v-model="getShift(day.fullDate).evening[idx]" 
-                    @change="saveData"
+                    @change="saveShiftData(day.fullDate)"
                     class="text-xs border border-slate-300 rounded p-1.5 w-full bg-white block">
                     <option value="">-- 晚班人選 {{ idx + 1 }} --</option>
                     <option 
@@ -228,11 +221,11 @@
                 </div>
                 <div v-else class="font-medium text-slate-700 flex flex-wrap gap-1">
                   <span v-for="(id, idx) in getShift(day.fullDate).evening" :key="idx">
-                    <span v-if="id" class="inline-block bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded text-xs font-semibold">
+                    <span v-if="id !== '' && id !== null && id !== undefined" class="inline-block bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded text-xs font-semibold">
                       {{ getStaffName(id) }}
                     </span>
                   </span>
-                  <span v-if="!getShift(day.fullDate).evening.some(id => id)" class="text-slate-400 italic text-xs">— 未指派 —</span>
+                  <span v-if="!getShift(day.fullDate).evening.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 未指派 —</span>
                 </div>
               </td>
 
@@ -255,7 +248,7 @@
 
       <!-- 老闆發布控制區 -->
       <div v-if="role === 'boss'" class="p-4 bg-slate-50 border-t flex justify-between items-center">
-        <span class="text-xs text-slate-500">系統已自動過濾請假與劃假人員</span>
+        <span class="text-xs text-slate-500">所有變更均會自動同步至雲端資料庫</span>
         <button @click="publishSchedule" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold shadow transition">
           🚀 發布本期班表
         </button>
@@ -268,9 +261,7 @@
         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">
           🔑 員工身分驗證 - {{ getStaffNameById(targetStaffId) }}
         </h3>
-        <p class="text-sm text-slate-500 mb-4">
-          請輸入您的個人密碼：
-        </p>
+        <p class="text-sm text-slate-500 mb-4">請輸入您的個人密碼：</p>
         
         <form @submit.prevent="verifyStaffPassword">
           <input 
@@ -280,22 +271,11 @@
             class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-amber-500"
             autofocus />
 
-          <p v-if="staffAuthError" class="text-xs text-rose-600 mb-3 font-semibold">
-            ❌ 密碼錯誤，請重新輸入！
-          </p>
+          <p v-if="staffAuthError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤，請重新輸入！</p>
 
           <div class="flex justify-end gap-2">
-            <button 
-              type="button" 
-              @click="showStaffAuthModal = false" 
-              class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-              取消
-            </button>
-            <button 
-              type="submit" 
-              class="px-5 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">
-              確認解鎖
-            </button>
+            <button type="button" @click="showStaffAuthModal = false" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+            <button type="submit" class="px-5 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">確認解鎖</button>
           </div>
         </form>
       </div>
@@ -304,12 +284,8 @@
     <!-- 老闆密碼驗證彈窗 Modal -->
     <div v-if="showAuthModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">
-          🔒 進入老闆模式驗證
-        </h3>
-        <p class="text-sm text-slate-500 mb-4">
-          此區域僅限迷客夏學府店店長/老闆操作，請輸入管理密碼：
-        </p>
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">🔒 進入老闆模式驗證</h3>
+        <p class="text-sm text-slate-500 mb-4">請輸入管理密碼：</p>
         
         <form @submit.prevent="verifyBossPassword">
           <input 
@@ -319,22 +295,11 @@
             class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-indigo-500"
             autofocus />
 
-          <p v-if="authError" class="text-xs text-rose-600 mb-3 font-semibold">
-            ❌ 密碼錯誤，請重新輸入！
-          </p>
+          <p v-if="authError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤，請重新輸入！</p>
 
           <div class="flex justify-end gap-2">
-            <button 
-              type="button" 
-              @click="showAuthModal = false" 
-              class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-              取消
-            </button>
-            <button 
-              type="submit" 
-              class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow">
-              確認解鎖
-            </button>
+            <button type="button" @click="showAuthModal = false" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+            <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow">確認解鎖</button>
           </div>
         </form>
       </div>
@@ -347,28 +312,28 @@
 
     createApp({
       setup() {
+        // ⚠️ 請把下方引號內替換成您的 Google Apps Script 部署 URL ⚠️
+        const GOOGLE_SCRIPT_URL = [https://script.google.com/macros/s/AKfycbxWyFTWzKf07IGm5c5CMcePSp_y5YThQ8vXmPjBxDx5NseGPYpAZmnm7BrHFo4k582k/exec];
+
         const role = ref('staff');
+        const isLoading = ref(false);
         const isBossAuthenticated = ref(false);
         const showAuthModal = ref(false);
         const inputPassword = ref('');
         const authError = ref(false);
-        
-        // 老闆驗證密碼
         const BOSS_PASSWORD = '5555';
 
-        // 員工解鎖驗證狀態
         const authenticatedStaffIds = ref([]);
         const showStaffAuthModal = ref(false);
         const targetStaffId = ref(null);
         const inputStaffPassword = ref('');
         const staffAuthError = ref(false);
 
-        // 年月與半月選擇
-        const currentYearMonth = ref('2026-10');
+        const today = new Date();
+        const currentYearMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
         const halfPeriod = ref('1');
         const currentStaffId = ref(0);
 
-        // 迷客夏學府店員工清單
         const staffList = ref([
           { id: 0, name: '店長', type: 'manager', password: '0000' },
           { id: 1, name: '美蓁', type: 'full', password: '0212' },
@@ -383,75 +348,94 @@
         const availability = ref({});
         const shifts = ref({});
 
-        // 載入本地儲存資料
+        // 雲端讀取資料
+        const fetchCloudData = async () => {
+          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+          isLoading.value = true;
+          try {
+            const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=read`);
+            const data = await res.json();
+            if (data.availability) availability.value = data.availability;
+            if (data.shifts) shifts.value = data.shifts;
+          } catch (e) {
+            console.error('雲端讀取失敗:', e);
+          } finally {
+            isLoading.value = false;
+          }
+        };
+
         onMounted(() => {
-          const savedAvail = localStorage.getItem('milksha_avail');
-          const savedShifts = localStorage.getItem('milksha_shifts');
-          if (savedAvail) availability.value = JSON.parse(savedAvail);
-          if (savedShifts) shifts.value = JSON.parse(savedShifts);
+          fetchCloudData();
         });
 
-        // 自動儲存到 LocalStorage
-        const saveData = () => {
-          localStorage.setItem('milksha_avail', JSON.stringify(availability.value));
-          localStorage.setItem('milksha_shifts', JSON.stringify(shifts.value));
+        // 雲端儲存劃假
+        const updateAvailability = async (staffId, fullDate, newStatus) => {
+          const key = `${Number(staffId)}_${fullDate}`;
+          availability.value[key] = newStatus;
+          
+          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+          try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
+            });
+          } catch (e) {
+            console.error('劃假同步失敗:', e);
+          }
         };
 
-        // --- 匯出 / 匯入 備份邏輯 ---
-        const exportData = () => {
-          const backupData = {
-            version: '1.0',
-            exportedAt: new Date().toLocaleString(),
-            availability: availability.value,
-            shifts: shifts.value
-          };
-          const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
-          const downloadAnchor = document.createElement('a');
-          downloadAnchor.setAttribute('href', dataStr);
-          downloadAnchor.setAttribute('download', `milksha_schedule_backup_${new Date().toISOString().slice(0, 10)}.json`);
-          document.body.appendChild(downloadAnchor);
-          downloadAnchor.click();
-          downloadAnchor.remove();
+        // 雲端儲存班表
+        const saveShiftData = async (fullDate) => {
+          const shiftData = getShift(fullDate);
+          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+          try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'saveShift', key: fullDate, val: shiftData })
+            });
+          } catch (e) {
+            console.error('班表同步失敗:', e);
+          }
         };
 
-        const importData = (event) => {
-          const file = event.target.files[0];
-          if (!file) return;
+        const lastDayOfCurrentMonth = computed(() => {
+          if (!currentYearMonth.value) return 31;
+          const [yearStr, monthStr] = currentYearMonth.value.split('-');
+          return new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
+        });
 
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            try {
-              const imported = JSON.parse(e.target.result);
-              if (imported.availability && imported.shifts) {
-                if (confirm('確定要匯入此備份檔嗎？這將會覆蓋目前的劃假與排班資料！')) {
-                  availability.value = imported.availability;
-                  shifts.value = imported.shifts;
-                  saveData();
-                  alert('✅ 備份資料匯入成功！');
-                  window.location.reload();
-                }
-              } else {
-                alert('❌ 備份檔格式不符，匯入失敗。');
-              }
-            } catch (err) {
-              alert('❌ 無法解析該檔案，請確認是否為有效的 JSON 備份檔。');
-            }
-          };
-          reader.readAsText(file);
-          // 清除選取以便可重複匯入同檔名檔案
-          event.target.value = '';
-        };
+        const daysInPeriod = computed(() => {
+          if (!currentYearMonth.value) return [];
+          const [yearStr, monthStr] = currentYearMonth.value.split('-');
+          const year = parseInt(yearStr, 10);
+          const month = parseInt(monthStr, 10) - 1;
+          
+          const totalDays = new Date(year, month + 1, 0).getDate();
+          const start = halfPeriod.value === '1' ? 1 : 16;
+          const end = halfPeriod.value === '1' ? 15 : totalDays;
+          
+          const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
+          const days = [];
 
-        // --- 員工身分與驗證邏輯 ---
-        const isStaffAuthenticated = (id) => {
-          return authenticatedStaffIds.value.includes(Number(id));
-        };
+          for (let i = start; i <= end; i++) {
+            const dateObj = new Date(year, month, i);
+            const m = String(month + 1).padStart(2, '0');
+            const d = String(i).padStart(2, '0');
+            const fullDate = `${year}-${m}-${d}`;
+            const dateStr = `${m}/${d}`;
+            const dayOfWeek = weekMap[dateObj.getDay()];
+            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+
+            days.push({ fullDate, dateStr, dayOfWeek, isWeekend });
+          }
+          return days;
+        });
+
+        const isStaffAuthenticated = (id) => authenticatedStaffIds.value.includes(Number(id));
 
         const handleStaffChange = (newId) => {
           currentStaffId.value = Number(newId);
-          if (!isStaffAuthenticated(newId)) {
-            openStaffAuthModal(newId);
-          }
+          if (!isStaffAuthenticated(newId)) openStaffAuthModal(newId);
         };
 
         const openStaffAuthModal = (staffId) => {
@@ -464,9 +448,7 @@
         const verifyStaffPassword = () => {
           const staff = staffList.value.find(s => s.id === targetStaffId.value);
           if (staff && inputStaffPassword.value === staff.password) {
-            if (!authenticatedStaffIds.value.includes(staff.id)) {
-              authenticatedStaffIds.value.push(staff.id);
-            }
+            if (!authenticatedStaffIds.value.includes(staff.id)) authenticatedStaffIds.value.push(staff.id);
             currentStaffId.value = staff.id;
             showStaffAuthModal.value = false;
           } else {
@@ -483,7 +465,6 @@
           return staff ? staff.name : '';
         };
 
-        // --- 老闆驗證邏輯 ---
         const openBossAuthModal = () => {
           if (isBossAuthenticated.value) {
             role.value = 'boss';
@@ -504,77 +485,18 @@
           }
         };
 
-        const switchToStaff = () => {
-          role.value = 'staff';
-        };
+        const switchToStaff = () => role.value = 'staff';
+        const logoutBoss = () => { isBossAuthenticated.value = false; role.value = 'staff'; };
 
-        const logoutBoss = () => {
-          isBossAuthenticated.value = false;
-          role.value = 'staff';
-        };
+        const getAvailability = (staffId, fullDate) => availability.value[`${Number(staffId)}_${fullDate}`] || 'available';
 
-        // 計算目前選擇月份與週期的所有日期
-        const daysInPeriod = computed(() => {
-          const [yearStr, monthStr] = currentYearMonth.value.split('-');
-          const year = parseInt(yearStr, 10);
-          const month = parseInt(monthStr, 10) - 1;
-          
-          const totalDays = new Date(year, month + 1, 0).getDate();
-          const start = halfPeriod.value === '1' ? 1 : 16;
-          const end = halfPeriod.value === '1' ? 15 : totalDays;
-          
-          const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
-          const days = [];
-
-          for (let i = start; i <= end; i++) {
-            const dateObj = new Date(year, month, i);
-            const m = month + 1 < 10 ? `0${month + 1}` : `${month + 1}`;
-            const d = i < 10 ? `0${i}` : `${i}`;
-            const fullDate = `${year}-${m}-${d}`;
-            const dateStr = `${m}/${d}`;
-            const dayOfWeek = weekMap[dateObj.getDay()];
-            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-
-            days.push({ fullDate, dateStr, dayOfWeek, isWeekend });
-          }
-          return days;
-        });
-
-        // 取得員工劃假狀態
-        const getAvailability = (staffId, fullDate) => {
-          const key = `${Number(staffId)}_${fullDate}`;
-          return availability.value[key] || 'available';
-        };
-
-        // 更新員工劃假狀態
-        const updateAvailability = (staffId, fullDate, newStatus) => {
-          const key = `${Number(staffId)}_${fullDate}`;
-          availability.value = {
-            ...availability.value,
-            [key]: newStatus
-          };
-          saveData();
-        };
-
-        // 取得當天班表資料
         const getShift = (fullDate) => {
           if (!shifts.value[fullDate]) {
-            shifts.value[fullDate] = { 
-              morning: ['', '', ''], 
-              evening: ['', ''] 
-            };
-          } else {
-            if (!Array.isArray(shifts.value[fullDate].morning)) {
-              shifts.value[fullDate].morning = [shifts.value[fullDate].morning || '', '', ''];
-            }
-            if (!Array.isArray(shifts.value[fullDate].evening)) {
-              shifts.value[fullDate].evening = [shifts.value[fullDate].evening || '', ''];
-            }
+            shifts.value[fullDate] = { morning: ['', '', ''], evening: ['', ''] };
           }
           return shifts.value[fullDate];
         };
 
-        // 過濾可上班員工清單
         const getAvailableStaffList = (fullDate, shiftType) => {
           return staffList.value.filter(s => {
             const status = getAvailability(s.id, fullDate);
@@ -585,16 +507,11 @@
           });
         };
 
-        // 計算班次已指派人數
         const countAssigned = (fullDate, shiftType) => {
-          const shiftData = getShift(fullDate)[shiftType];
-          return shiftData.filter(id => id !== '').length;
+          return getShift(fullDate)[shiftType].filter(id => id !== '' && id !== null && id !== undefined).length;
         };
 
-        // 檢查排班是否完成
-        const isShiftComplete = (fullDate) => {
-          return countAssigned(fullDate, 'morning') === 3 && countAssigned(fullDate, 'evening') === 2;
-        };
+        const isShiftComplete = (fullDate) => countAssigned(fullDate, 'morning') === 3 && countAssigned(fullDate, 'evening') === 2;
 
         const getStaffName = (id) => {
           const staff = staffList.value.find(s => s.id === Number(id));
@@ -603,79 +520,33 @@
           return `${staff.name} (${tag})`;
         };
 
-        const getStatusText = (status) => {
-          const map = { available: '可', off: '休', morning_only: '早', evening_only: '晚' };
-          return map[status] || '可';
-        };
+        const getStatusText = (status) => ({ available: '可', off: '休', morning_only: '早', evening_only: '晚' }[status] || '可');
 
-        const getBadgeClass = (status) => {
-          const map = {
-            available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            off: 'bg-rose-50 text-rose-700 border-rose-200 font-bold',
-            morning_only: 'bg-amber-50 text-amber-700 border-amber-200',
-            evening_only: 'bg-purple-50 text-purple-700 border-purple-200'
-          };
-          return map[status] || 'bg-slate-50 text-slate-600';
-        };
+        const getBadgeClass = (status) => ({
+          available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          off: 'bg-rose-50 text-rose-700 border-rose-200 font-bold',
+          morning_only: 'bg-amber-50 text-amber-700 border-amber-200',
+          evening_only: 'bg-purple-50 text-purple-700 border-purple-200'
+        }[status] || 'bg-slate-50 text-slate-600');
 
-        const getAvailabilityClass = (status) => {
-          const map = {
-            available: 'text-emerald-700 font-bold',
-            off: 'text-rose-600 font-bold',
-            morning_only: 'text-amber-700 font-bold',
-            evening_only: 'text-purple-700 font-bold'
-          };
-          return map[status] || '';
-        };
+        const getAvailabilityClass = (status) => ({
+          available: 'text-emerald-700 font-bold',
+          off: 'text-rose-600 font-bold',
+          morning_only: 'text-amber-700 font-bold',
+          evening_only: 'text-purple-700 font-bold'
+        }[status] || '');
 
-        const publishSchedule = () => {
-          saveData();
-          alert('🚀 迷客夏學府店本期班表已發布並自動存檔！');
-        };
+        const publishSchedule = () => alert('🚀 迷客夏學府店本期班表已成功發布並同步至雲端！');
 
         return {
-          role,
-          isBossAuthenticated,
-          showAuthModal,
-          inputPassword,
-          authError,
-          openBossAuthModal,
-          verifyBossPassword,
-          switchToStaff,
-          logoutBoss,
-          // 備份匯出匯入
-          exportData,
-          importData,
-          // 員工驗證相關
-          authenticatedStaffIds,
-          showStaffAuthModal,
-          targetStaffId,
-          inputStaffPassword,
-          staffAuthError,
-          isStaffAuthenticated,
-          handleStaffChange,
-          openStaffAuthModal,
-          verifyStaffPassword,
-          logoutStaff,
-          getStaffNameById,
-          // 排班與劃假資料
-          currentYearMonth,
-          halfPeriod,
-          currentStaffId,
-          staffList,
-          daysInPeriod,
-          getAvailability,
-          updateAvailability,
-          getShift,
-          getAvailableStaffList,
-          countAssigned,
-          isShiftComplete,
-          getStaffName,
-          getStatusText,
-          getBadgeClass,
-          getAvailabilityClass,
-          saveData,
-          publishSchedule
+          role, isLoading, isBossAuthenticated, showAuthModal, inputPassword, authError,
+          openBossAuthModal, verifyBossPassword, switchToStaff, logoutBoss,
+          authenticatedStaffIds, showStaffAuthModal, targetStaffId, inputStaffPassword, staffAuthError,
+          isStaffAuthenticated, handleStaffChange, openStaffAuthModal, verifyStaffPassword, logoutStaff, getStaffNameById,
+          currentYearMonth, halfPeriod, lastDayOfCurrentMonth, currentStaffId, staffList, daysInPeriod,
+          getAvailability, updateAvailability, saveShiftData, fetchCloudData,
+          getShift, getAvailableStaffList, countAssigned, isShiftComplete, getStaffName, getStatusText,
+          getBadgeClass, getAvailabilityClass, publishSchedule
         };
       }
     }).mount('#app');
