@@ -15,7 +15,7 @@
     <header class="bg-white rounded-xl shadow-md p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-          🐄 迷客夏學府店-萬年曆排班系統
+          🐄 迷客夏學府店-排班
           <span v-if="isLoading" class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full animate-pulse">☁️ 資料同步中...</span>
         </h1>
         <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人</p>
@@ -41,7 +41,7 @@
 
     <!-- 萬年曆：週期與員工切換列 -->
     <div class="bg-white rounded-xl shadow-md p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
-      <!-- 萬年曆選擇器：選擇任意年月與半月週期 -->
+      <!-- 日期選擇器：選擇任意年月與半月週期 -->
       <div class="flex items-center gap-3">
         <label class="font-bold text-slate-700">選擇年月：</label>
         <input 
@@ -312,7 +312,7 @@
     createApp({
       setup() {
         // ⚠️ 請把下方引號內替換成您的 Google Apps Script 部署 URL ⚠️
-        const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxWyFTWzKf07IGm5c5CMcePSp_y5YThQ8vXmPjBxDx5NseGPYpAZmnm7BrHFo4k582k/exec';
 
         const role = ref('staff');
         const isLoading = ref(false);
