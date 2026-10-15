@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>迷客夏學府店-雲端同步排班系統</title>
+  <title>迷客夏學府店排班</title>
   <!-- Vue 3 & Tailwind CSS CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,10 +15,10 @@
     <header class="bg-white rounded-xl shadow-md p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-          🐄 迷客夏學府店-萬年曆排班系統
+          🐄 迷客夏學府店-排班
           <span v-if="isLoading" class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full animate-pulse">☁️ 資料同步中...</span>
         </h1>
-        <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人</p>
+        <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:00 | 班別需求：早班 3 人、晚班 2 人</p>
       </div>
 
       <!-- 視角切換器 -->
@@ -103,16 +103,43 @@
       </div>
     </div>
 
+    <!-- 老闆專屬：劃假截止時間設定橫幅 -->
+    <div v-if="role === 'boss'" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-indigo-700 font-bold">⏰ 設定劃假截止時間：</span>
+        <input 
+          type="datetime-local" 
+          v-model="deadline" 
+          @change="saveDeadline"
+          class="border border-indigo-300 rounded-lg px-3 py-1.5 bg-white text-sm font-medium focus:outline-indigo-500" />
+      </div>
+      <div class="text-xs text-indigo-600">
+        <span v-if="deadline">當前截止：<strong>{{ formatDeadline(deadline) }}</strong> (時間到期後員工將無法修改劃假)</span>
+        <span v-else>尚未設定截止時間（員工可隨時劃假）</span>
+      </div>
+    </div>
+
+    <!-- 員工專屬：截止狀態提示 -->
+    <div v-if="role === 'staff' && deadline" class="mb-4 p-3 rounded-lg text-sm flex items-center justify-between"
+         :class="isDeadlinePassed ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-blue-50 border border-blue-200 text-blue-700'">
+      <span>
+        <strong v-if="isDeadlinePassed">🚨 劃假已截止：</strong>
+        <strong v-else>⏳ 劃假進行中：</strong>
+        截止時間為 <strong>{{ formatDeadline(deadline) }}</strong>
+        <span v-if="isDeadlinePassed">（目前已超過截止時間，劃假功能已鎖定）</span>
+      </span>
+    </div>
+
     <!-- 主表格區域 -->
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
       
       <!-- 模式提示說明 -->
       <div :class="role === 'staff' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800'" class="p-4 border-b text-sm flex justify-between items-center">
         <div v-if="role === 'staff'">
-          💡 <strong>雲端自動同步中：</strong> 劃假修改後會即時回傳雲端，所有人均可即時查看劃假狀態。
+          💡 <strong>雲端自動同步中：</strong> 檢視全員劃假與個人排假狀況。
         </div>
         <div v-else>
-          👑 <strong>老闆管理模式：</strong> 排班異動會即時發布至雲端資料庫。
+          👑 <strong>老闆管理模式：</strong> 可自由排班、指派人力並設定劃假截止時間。
         </div>
       </div>
 
@@ -141,28 +168,34 @@
                 </span>
               </td>
 
-              <!-- 劃假狀態欄（直出所有人劃假概況） -->
+              <!-- 劃假狀態欄 -->
               <td class="p-3">
                 <div v-if="role === 'staff'" class="space-y-2">
-                  <!-- 個人劃假操作 -->
-                  <div v-if="isStaffAuthenticated(currentStaffId)">
-                    <select 
-                      :value="getAvailability(currentStaffId, day.fullDate)"
-                      @change="updateAvailability(currentStaffId, day.fullDate, $event.target.value)"
-                      class="text-xs border rounded p-1.5 w-full bg-white font-medium"
-                      :class="getAvailabilityClass(getAvailability(currentStaffId, day.fullDate))">
-                      <option value="available">🟢 可排班 (正常)</option>
-                      <option value="off">🔴 休假 / 劃假</option>
-                      <option value="morning_only">🟡 僅可早班</option>
-                      <option value="evening_only">🟣 僅可晚班</option>
-                    </select>
+                  <!-- 個人劃假操作（若超過截止時間則鎖定顯示） -->
+                  <div v-if="!isDeadlinePassed">
+                    <div v-if="isStaffAuthenticated(currentStaffId)">
+                      <select 
+                        :value="getAvailability(currentStaffId, day.fullDate)"
+                        @change="updateAvailability(currentStaffId, day.fullDate, $event.target.value)"
+                        class="text-xs border rounded p-1.5 w-full bg-white font-medium"
+                        :class="getAvailabilityClass(getAvailability(currentStaffId, day.fullDate))">
+                        <option value="available">🟢 可排班 (正常)</option>
+                        <option value="off">🔴 休假 / 劃假</option>
+                        <option value="morning_only">🟡 僅可早班</option>
+                        <option value="evening_only">🟣 僅可晚班</option>
+                      </select>
+                    </div>
+                    <div v-else class="text-xs text-slate-400 italic flex items-center justify-between bg-slate-100 p-1.5 rounded">
+                      <span>🔒 驗證後可修改自己劃假</span>
+                      <button @click="openStaffAuthModal(currentStaffId)" class="text-amber-600 font-bold hover:underline ml-1">解鎖</button>
+                    </div>
                   </div>
-                  <div v-else class="text-xs text-slate-400 italic flex items-center justify-between bg-slate-100 p-1.5 rounded">
-                    <span>🔒 驗證後可修改自己劃假</span>
-                    <button @click="openStaffAuthModal(currentStaffId)" class="text-amber-600 font-bold hover:underline ml-1">解鎖</button>
+                  <!-- 超過截止時間後的唯讀提示 -->
+                  <div v-else class="text-xs bg-rose-50 text-rose-700 font-semibold p-2 rounded border border-rose-200 text-center">
+                    🔒 已截止 ({{ getStatusText(getAvailability(currentStaffId, day.fullDate)) }})
                   </div>
 
-                  <!-- 全員劃假概況（無論是否驗證，直接永久顯示） -->
+                  <!-- 全員劃假概況 -->
                   <div class="pt-1.5 border-t border-slate-200">
                     <div class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
                       👥 全員劃假概況：
@@ -329,7 +362,7 @@
     createApp({
       setup() {
         // ⚠️ 請把下方引號內替換成您的 Google Apps Script 部署 URL ⚠️
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXxKZfhI4mQbgboMGposElDfmZoHW9SbqdPJDOAqYGbomf2JtwfwmkVqgJtYWvRVnUVA/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwF2u2AvERHiJy_ZFWm2GUzPvLZjcVrpzq47VxZzT975XSf8xMHjxoCex8-EQ91uiufrA/exec';
 
         const role = ref('staff');
         const isLoading = ref(false);
@@ -338,6 +371,8 @@
         const inputPassword = ref('');
         const authError = ref(false);
         const BOSS_PASSWORD = '5555';
+
+        const deadline = ref('');
 
         const authenticatedStaffIds = ref([]);
         const showStaffAuthModal = ref(false);
@@ -374,6 +409,7 @@
             const data = await res.json();
             if (data.availability) availability.value = data.availability;
             if (data.shifts) shifts.value = data.shifts;
+            if (data.deadline) deadline.value = data.deadline;
           } catch (e) {
             console.error('雲端讀取失敗:', e);
           } finally {
@@ -385,8 +421,36 @@
           fetchCloudData();
         });
 
+        // 雲端儲存截止時間
+        const saveDeadline = async () => {
+          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+          try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'saveDeadline', val: deadline.value })
+            });
+          } catch (e) {
+            console.error('截止時間同步失敗:', e);
+          }
+        };
+
+        // 判斷是否超過截止時間
+        const isDeadlinePassed = computed(() => {
+          if (!deadline.value) return false;
+          const now = new Date();
+          const target = new Date(deadline.value);
+          return now > target;
+        });
+
+        const formatDeadline = (isoStr) => {
+          if (!isoStr) return '';
+          const d = new Date(isoStr);
+          return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+
         // 雲端儲存劃假
         const updateAvailability = async (staffId, fullDate, newStatus) => {
+          if (isDeadlinePassed.value) return; // 超過時間禁止修改
           const key = `${Number(staffId)}_${fullDate}`;
           availability.value[key] = newStatus;
           
@@ -562,6 +626,7 @@
         return {
           role, isLoading, isBossAuthenticated, showAuthModal, inputPassword, authError,
           openBossAuthModal, verifyBossPassword, switchToStaff, logoutBoss,
+          deadline, saveDeadline, isDeadlinePassed, formatDeadline,
           authenticatedStaffIds, showStaffAuthModal, targetStaffId, inputStaffPassword, staffAuthError,
           isStaffAuthenticated, handleStaffChange, openStaffAuthModal, verifyStaffPassword, logoutStaff, getStaffNameById,
           currentYearMonth, halfPeriod, lastDayOfCurrentMonth, currentStaffId, staffList, daysInPeriod,
