@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>迷客夏學府店-雲端同步排班系統</title>
+  <title>迷客夏學府店-排班系統</title>
   <!-- Vue 3 & Tailwind CSS CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,10 +15,10 @@
     <header class="bg-white rounded-xl shadow-md p-5 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-          🐄 迷客夏學府店-萬年曆排班系統
+          🐄 迷客夏學府店-排班系統
           <span v-if="isLoading" class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full animate-pulse">☁️ 資料同步中...</span>
         </h1>
-        <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:30 | 班別需求：早班 3 人、晚班 2 人</p>
+        <p class="text-sm text-slate-500 mt-1">營業時間：09:00 - 22:00 | 班別需求：早班 3 人、晚班 2 人</p>
       </div>
 
       <!-- 視角切換器 -->
