@@ -136,7 +136,7 @@
       <!-- 模式提示說明 -->
       <div :class="role === 'staff' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800'" class="p-4 border-b text-sm flex justify-between items-center">
         <div v-if="role === 'staff'">
-          💡 <strong>雲端自動同步中：</strong> 檢視全員劃假與個人排假狀況。
+          💡 <strong>雲端同步排班檢視：</strong> 您可以查看自己的劃假、全員劃假狀況，以及老闆排好的班表結果。
         </div>
         <div v-else>
           👑 <strong>老闆管理模式：</strong> 可自由排班、指派人力，並可直接點擊下方調整任一員工的劃假狀態。
@@ -249,13 +249,14 @@
                     </option>
                   </select>
                 </div>
+                <!-- 員工視角：顯示老闆排好的早班結果 -->
                 <div v-else class="font-medium text-slate-700 flex flex-wrap gap-1">
                   <span v-for="(id, idx) in getShift(day.fullDate).morning" :key="idx">
                     <span v-if="id !== '' && id !== null && id !== undefined" class="inline-block bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded text-xs font-semibold">
                       {{ getStaffName(id) }}
                     </span>
                   </span>
-                  <span v-if="!getShift(day.fullDate).morning.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 未指派 —</span>
+                  <span v-if="!getShift(day.fullDate).morning.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 尚未排班 —</span>
                 </div>
               </td>
 
@@ -278,13 +279,14 @@
                     </option>
                   </select>
                 </div>
+                <!-- 員工視角：顯示老闆排好的晚班結果 -->
                 <div v-else class="font-medium text-slate-700 flex flex-wrap gap-1">
                   <span v-for="(id, idx) in getShift(day.fullDate).evening" :key="idx">
                     <span v-if="id !== '' && id !== null && id !== undefined" class="inline-block bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded text-xs font-semibold">
                       {{ getStaffName(id) }}
                     </span>
                   </span>
-                  <span v-if="!getShift(day.fullDate).evening.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 未指派 —</span>
+                  <span v-if="!getShift(day.fullDate).evening.some(id => id !== '' && id !== null && id !== undefined)" class="text-slate-400 italic text-xs">— 尚未排班 —</span>
                 </div>
               </td>
 
@@ -444,7 +446,6 @@
           }
         };
 
-        // 判斷是否超過截止時間（老闆不受限制）
         const isDeadlinePassed = computed(() => {
           if (!deadline.value) return false;
           const now = new Date();
@@ -458,7 +459,7 @@
           return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         };
 
-        // 雲端儲存劃假（老闆可隨時修改，員工受截止時間限制）
+        // 雲端儲存劃假
         const updateAvailability = async (staffId, fullDate, newStatus) => {
           if (role.value === 'staff' && isDeadlinePassed.value) return; 
           
