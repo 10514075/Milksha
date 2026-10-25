@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>迷客夏學府店-排班系統</title>
-  <!-- Vue 3 & Tailwind CSS CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -39,9 +38,8 @@
       </div>
     </header>
 
-    <!-- 萬年曆：週期與員工切換列 -->
+    <!-- 萬年曆與身分切換列 -->
     <div class="bg-white rounded-xl shadow-md p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
-      <!-- 萬年曆選擇器：選擇任意年月與半月週期 -->
       <div class="flex items-center gap-3">
         <label class="font-bold text-slate-700">選擇年月：</label>
         <input 
@@ -59,7 +57,7 @@
         </button>
       </div>
 
-      <!-- 員工模式下：選擇切換目前員工與登入驗證 -->
+      <!-- 員工身分選單 -->
       <div v-if="role === 'staff'" class="flex items-center gap-2">
         <label class="font-bold text-slate-700">選擇身分：</label>
         <select 
@@ -85,7 +83,7 @@
         </button>
       </div>
 
-      <!-- 老闆模式下：統計資訊與登出鈕 -->
+      <!-- 老闆模式統計 -->
       <div v-if="role === 'boss'" class="flex flex-wrap items-center gap-3 text-sm font-medium">
         <span class="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg border border-purple-200">
           管理職：{{ staffList.filter(s => s.type === 'manager').length }} 人
@@ -96,14 +94,13 @@
         <span class="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg border border-green-200">
           兼職：{{ staffList.filter(s => s.type === 'part').length }} 人
         </span>
-
         <button @click="logoutBoss" class="text-xs text-rose-600 hover:text-rose-800 underline ml-2">
           退出管理權限
         </button>
       </div>
     </div>
 
-    <!-- 老闆專屬：劃假截止時間設定橫幅 -->
+    <!-- 截止時間設定 -->
     <div v-if="role === 'boss'" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-2">
         <span class="text-indigo-700 font-bold">⏰ 設定劃假截止時間：</span>
@@ -119,30 +116,13 @@
       </div>
     </div>
 
-    <!-- 員工專屬：截止狀態提示 -->
-    <div v-if="role === 'staff' && deadline" class="mb-4 p-3 rounded-lg text-sm flex items-center justify-between"
-         :class="isDeadlinePassed ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-blue-50 border border-blue-200 text-blue-700'">
-      <span>
-        <strong v-if="isDeadlinePassed">🚨 劃假已截止：</strong>
-        <strong v-else>⏳ 劃假進行中：</strong>
-        截止時間為 <strong>{{ formatDeadline(deadline) }}</strong>
-      </span>
-    </div>
-
     <!-- 主表格區域 -->
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
-      
-      <!-- 模式提示說明 -->
-      <div :class="role === 'staff' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800'" class="p-4 border-b text-sm flex justify-between items-center">
-        <div v-if="role === 'staff'">
-          💡 <strong>雲端自動同步中：</strong> 檢視全員劃假與個人排假狀況。
-        </div>
-        <div v-else>
-          👑 <strong>老闆管理模式：</strong> 可自由排班、代改劃假、或點擊右側按鈕將特定日期設為「🚫 禁休」。
-        </div>
+      <div :class="role === 'staff' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-800'" class="p-4 border-b text-sm">
+        <span v-if="role === 'staff'">💡 <strong>雲端自動同步中：</strong> 檢視全員劃假與個人排假狀況。</span>
+        <span v-else>👑 <strong>老闆管理模式：</strong> 可自由排班、代改劃假、或點擊右側按鈕將特定日期設為「🚫 禁休」。</span>
       </div>
 
-      <!-- 排班與劃假日曆表格 -->
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -157,21 +137,15 @@
           </thead>
           <tbody class="divide-y divide-slate-200 text-sm">
             <tr v-for="day in daysInPeriod" :key="day.fullDate" class="hover:bg-slate-50">
-              <!-- 日期 -->
               <td class="p-3 font-semibold text-slate-800">{{ day.dateStr }}</td>
-              
-              <!-- 星期 -->
               <td class="p-3">
-                <span :class="day.isWeekend ? 'text-red-500 font-bold' : 'text-slate-600'">
-                  週{{ day.dayOfWeek }}
-                </span>
+                <span :class="day.isWeekend ? 'text-red-500 font-bold' : 'text-slate-600'">週{{ day.dayOfWeek }}</span>
               </td>
 
-              <!-- 劃假狀態欄 -->
+              <!-- 劃假狀態 -->
               <td class="p-3">
-                <!-- 若該天被設為禁休 -->
                 <div v-if="isForbidden(day.fullDate)" class="space-y-2">
-                  <div class="bg-rose-100 text-rose-800 text-xs font-bold p-2 rounded border border-rose-300 text-center flex items-center justify-center gap-1">
+                  <div class="bg-rose-100 text-rose-800 text-xs font-bold p-2 rounded border border-rose-300 text-center">
                     🚫 本日禁休（需排休聯絡店長）
                   </div>
                   <div class="pt-1.5 border-t border-slate-200">
@@ -184,7 +158,6 @@
                   </div>
                 </div>
 
-                <!-- 正常開放劃假天 -->
                 <div v-else>
                   <!-- 員工視角 -->
                   <div v-if="role === 'staff'" class="space-y-2">
@@ -207,25 +180,20 @@
                       </div>
                     </div>
                     <div v-else class="text-xs bg-rose-50 text-rose-700 font-semibold p-2 rounded border border-rose-200 text-center">
-                      🔒 已截止 ({{ getStatusText(getAvailability(currentStaffId, day.fullDate)) }})
+                      🔒 已截止
                     </div>
 
-                    <!-- 全員劃假概況 -->
                     <div class="pt-1.5 border-t border-slate-200">
-                      <div class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
-                        👥 全員劃假概況：
-                      </div>
+                      <div class="text-[11px] font-bold text-slate-500 mb-1">👥 全員劃假概況：</div>
                       <div class="flex flex-wrap gap-1">
-                        <span v-for="s in staffList" :key="s.id"
-                              :class="getBadgeClass(getAvailability(s.id, day.fullDate))"
-                              class="text-[11px] px-1.5 py-0.5 rounded border shadow-sm">
+                        <span v-for="s in staffList" :key="s.id" :class="getBadgeClass(getAvailability(s.id, day.fullDate))" class="text-[11px] px-1.5 py-0.5 rounded border shadow-sm">
                           {{ s.name }}: {{ getStatusText(getAvailability(s.id, day.fullDate)) }}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <!-- 老闆視角：可代改劃假 -->
+                  <!-- 老闆視角：代改 -->
                   <div v-else class="space-y-2">
                     <div class="text-[11px] font-bold text-indigo-700 mb-1">👑 老闆代改員工劃假：</div>
                     <div class="space-y-1 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
@@ -247,22 +215,17 @@
                 </div>
               </td>
 
-              <!-- 早班安排 (3位) -->
+              <!-- 早班安排 -->
               <td class="p-3">
                 <div v-if="role === 'boss'" class="space-y-1.5">
                   <select 
-                    v-for="idx in [0, 1, 2]" 
-                    :key="idx"
+                    v-for="idx in [0, 1, 2]" :key="idx"
                     v-model="getShift(day.fullDate).morning[idx]" 
                     @change="saveShiftData(day.fullDate)"
                     class="text-xs border border-slate-300 rounded p-1.5 w-full bg-white block">
                     <option value="">-- 早班人選 {{ idx + 1 }} --</option>
-                    <option 
-                      v-for="s in getAvailableStaffList(day.fullDate, 'morning')" 
-                      :key="s.id" 
-                      :value="s.id"
-                      :disabled="getShift(day.fullDate).morning.includes(s.id) && getShift(day.fullDate).morning[idx] !== s.id">
-                      {{ s.name }} ({{ s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼') }})
+                    <option v-for="s in getAvailableStaffList(day.fullDate, 'morning')" :key="s.id" :value="s.id">
+                      {{ s.name }}
                     </option>
                   </select>
                 </div>
@@ -276,22 +239,17 @@
                 </div>
               </td>
 
-              <!-- 晚班安排 (2位) -->
+              <!-- 晚班安排 -->
               <td class="p-3">
                 <div v-if="role === 'boss'" class="space-y-1.5">
                   <select 
-                    v-for="idx in [0, 1]" 
-                    :key="idx"
+                    v-for="idx in [0, 1]" :key="idx"
                     v-model="getShift(day.fullDate).evening[idx]" 
                     @change="saveShiftData(day.fullDate)"
                     class="text-xs border border-slate-300 rounded p-1.5 w-full bg-white block">
                     <option value="">-- 晚班人選 {{ idx + 1 }} --</option>
-                    <option 
-                      v-for="s in getAvailableStaffList(day.fullDate, 'evening')" 
-                      :key="s.id" 
-                      :value="s.id"
-                      :disabled="getShift(day.fullDate).evening.includes(s.id) && getShift(day.fullDate).evening[idx] !== s.id">
-                      {{ s.name }} ({{ s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼') }})
+                    <option v-for="s in getAvailableStaffList(day.fullDate, 'evening')" :key="s.id" :value="s.id">
+                      {{ s.name }}
                     </option>
                   </select>
                 </div>
@@ -305,20 +263,12 @@
                 </div>
               </td>
 
-              <!-- 狀態與老闆禁休開關 -->
+              <!-- 狀態與禁休按鈕 -->
               <td class="p-3 space-y-2">
                 <div>
-                  <span v-if="isShiftComplete(day.fullDate)" class="text-emerald-600 font-bold text-xs flex items-center gap-1">
-                    ✅ 已完成
-                  </span>
-                  <span v-else class="text-amber-600 font-semibold text-xs flex flex-col gap-0.5">
-                    <span>⚠️ 人力不足</span>
-                    <span class="text-[10px] text-slate-500">
-                      (早:{{ countAssigned(day.fullDate, 'morning') }}/3 晚:{{ countAssigned(day.fullDate, 'evening') }}/2)
-                    </span>
-                  </span>
+                  <span v-if="isShiftComplete(day.fullDate)" class="text-emerald-600 font-bold text-xs">✅ 已完成</span>
+                  <span v-else class="text-amber-600 font-semibold text-xs">⚠️ 人力不足</span>
                 </div>
-
                 <div v-if="role === 'boss'" class="pt-2 border-t border-slate-200">
                   <button @click="toggleForbidden(day.fullDate)"
                           :class="isForbidden(day.fullDate) ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'"
@@ -331,61 +281,32 @@
           </tbody>
         </table>
       </div>
-
-      <!-- 老闆發布控制區 -->
-      <div v-if="role === 'boss'" class="p-4 bg-slate-50 border-t flex justify-between items-center">
-        <span class="text-xs text-slate-500">所有變更均會自動同步至雲端資料庫</span>
-        <button @click="publishSchedule" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold shadow transition">
-          🚀 發布本期班表
-        </button>
-      </div>
     </div>
 
-    <!-- 員工密碼驗證彈窗 Modal -->
+    <!-- 驗證彈窗 -->
     <div v-if="showStaffAuthModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">
-          🔑 員工身分驗證 - {{ getStaffNameById(targetStaffId) }}
-        </h3>
-        <p class="text-sm text-slate-500 mb-4">請輸入您的個人密碼：</p>
-        
+        <h3 class="text-lg font-bold text-slate-800 mb-2">🔑 員工身分驗證</h3>
         <form @submit.prevent="verifyStaffPassword">
-          <input 
-            v-model="inputStaffPassword" 
-            type="password" 
-            placeholder="請輸入個人密碼"
-            class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-amber-500"
-            autofocus />
-
-          <p v-if="staffAuthError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤，請重新輸入！</p>
-
+          <input v-model="inputStaffPassword" type="password" placeholder="請輸入個人密碼" class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-amber-500" autofocus />
+          <p v-if="staffAuthError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤！</p>
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showStaffAuthModal = false" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-            <button type="submit" class="px-5 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow">確認解鎖</button>
+            <button type="button" @click="showStaffAuthModal = false" class="px-4 py-2 text-sm text-slate-600">取消</button>
+            <button type="submit" class="px-5 py-2 text-sm bg-amber-600 text-white font-bold rounded-lg">確認解鎖</button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- 老闆密碼驗證彈窗 Modal -->
     <div v-if="showAuthModal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">🔒 進入老闆模式驗證</h3>
-        <p class="text-sm text-slate-500 mb-4">請輸入管理密碼：</p>
-        
+        <h3 class="text-lg font-bold text-slate-800 mb-2">🔒 老闆模式驗證</h3>
         <form @submit.prevent="verifyBossPassword">
-          <input 
-            v-model="inputPassword" 
-            type="password" 
-            placeholder="請輸入密碼"
-            class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-indigo-500"
-            autofocus />
-
-          <p v-if="authError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤，請重新輸入！</p>
-
+          <input v-model="inputPassword" type="password" placeholder="請輸入管理密碼" class="w-full border border-slate-300 rounded-lg p-3 text-sm mb-3 focus:outline-indigo-500" autofocus />
+          <p v-if="authError" class="text-xs text-rose-600 mb-3 font-semibold">❌ 密碼錯誤！</p>
           <div class="flex justify-end gap-2">
-            <button type="button" @click="showAuthModal = false" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-            <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow">確認解鎖</button>
+            <button type="button" @click="showAuthModal = false" class="px-4 py-2 text-sm text-slate-600">取消</button>
+            <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 text-white font-bold rounded-lg">確認解鎖</button>
           </div>
         </form>
       </div>
@@ -409,7 +330,6 @@
         const BOSS_PASSWORD = '5555';
 
         const deadline = ref('');
-
         const authenticatedStaffIds = ref([]);
         const showStaffAuthModal = ref(false);
         const targetStaffId = ref(null);
@@ -419,7 +339,6 @@
         const today = new Date();
         const currentYearMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
         const halfPeriod = ref(today.getDate() <= 15 ? '1' : '2');
-        
         const currentStaffId = ref(0);
 
         const staffList = ref([
@@ -437,9 +356,8 @@
         const shifts = ref({});
         const forbiddenDays = ref({});
 
-        // 雲端讀取資料（含 forbidden 禁休狀態）
         const fetchCloudData = async () => {
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
+          if (!GOOGLE_SCRIPT_URL) return;
           isLoading.value = true;
           try {
             const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=read`);
@@ -455,47 +373,34 @@
           }
         };
 
-        onMounted(() => {
-          fetchCloudData();
-        });
+        onMounted(() => { fetchCloudData(); });
 
         const saveDeadline = async () => {
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           try {
             await fetch(GOOGLE_SCRIPT_URL, {
               method: 'POST',
               body: JSON.stringify({ action: 'saveDeadline', val: deadline.value })
             });
-          } catch (e) {
-            console.error('截止時間同步失敗:', e);
-          }
+          } catch (e) { console.error(e); }
         };
 
-        // 禁休切換與雲端同步
         const toggleForbidden = async (fullDate) => {
           const current = !!forbiddenDays.value[fullDate];
           forbiddenDays.value[fullDate] = !current;
 
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           try {
             await fetch(GOOGLE_SCRIPT_URL, {
               method: 'POST',
               body: JSON.stringify({ action: 'saveForbidden', key: fullDate, val: String(!current) })
             });
-          } catch (e) {
-            console.error('禁休狀態同步失敗:', e);
-          }
+          } catch (e) { console.error(e); }
         };
 
-        const isForbidden = (fullDate) => {
-          return !!forbiddenDays.value[fullDate];
-        };
+        const isForbidden = (fullDate) => !!forbiddenDays.value[fullDate];
 
         const isDeadlinePassed = computed(() => {
           if (!deadline.value) return false;
-          const now = new Date();
-          const target = new Date(deadline.value);
-          return now > target;
+          return new Date() > new Date(deadline.value);
         });
 
         const formatDeadline = (isoStr) => {
@@ -505,53 +410,41 @@
         };
 
         const updateAvailability = async (staffId, fullDate, newStatus) => {
-          if (isForbidden(fullDate)) return; 
-          if (role.value === 'staff' && isDeadlinePassed.value) return; 
-          
+          if (isForbidden(fullDate)) return;
           const key = `${Number(staffId)}_${fullDate}`;
           availability.value[key] = newStatus;
-          
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           try {
             await fetch(GOOGLE_SCRIPT_URL, {
               method: 'POST',
               body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
             });
-          } catch (e) {
-            console.error('劃假同步失敗:', e);
-          }
+          } catch (e) { console.error(e); }
         };
 
         const saveShiftData = async (fullDate) => {
           const shiftData = getShift(fullDate);
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           try {
             await fetch(GOOGLE_SCRIPT_URL, {
               method: 'POST',
               body: JSON.stringify({ action: 'saveShift', key: fullDate, val: shiftData })
             });
-          } catch (e) {
-            console.error('班表同步失敗:', e);
-          }
+          } catch (e) { console.error(e); }
         };
 
         const lastDayOfCurrentMonth = computed(() => {
           if (!currentYearMonth.value) return 31;
-          const [yearStr, monthStr] = currentYearMonth.value.split('-');
-          return new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
+          const [y, m] = currentYearMonth.value.split('-');
+          return new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
         });
 
-        // 🌟 核心修正：強制產生 YYYY-MM-DD（補零格式），確保與試算表 100% 吻合
         const daysInPeriod = computed(() => {
           if (!currentYearMonth.value) return [];
-          const [yearStr, monthStr] = currentYearMonth.value.split('-');
-          const year = parseInt(yearStr, 10);
-          const month = parseInt(monthStr, 10) - 1;
-          
+          const [yStr, mStr] = currentYearMonth.value.split('-');
+          const year = parseInt(yStr, 10);
+          const month = parseInt(mStr, 10) - 1;
           const totalDays = new Date(year, month + 1, 0).getDate();
           const start = halfPeriod.value === '1' ? 1 : 16;
           const end = halfPeriod.value === '1' ? 15 : totalDays;
-          
           const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
           const days = [];
 
@@ -559,86 +452,64 @@
             const dateObj = new Date(year, month, i);
             const m = String(month + 1).padStart(2, '0');
             const d = String(i).padStart(2, '0');
-            const fullDate = `${year}-${m}-${d}`;
-            const dateStr = `${m}/${d}`;
-            const dayOfWeek = weekMap[dateObj.getDay()];
-            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-
-            days.push({ fullDate, dateStr, dayOfWeek, isWeekend });
+            days.push({
+              fullDate: `${year}-${m}-${d}`,
+              dateStr: `${m}/${d}`,
+              dayOfWeek: weekMap[dateObj.getDay()],
+              isWeekend: dateObj.getDay() === 0 || dateObj.getDay() === 6
+            });
           }
           return days;
         });
 
         const isStaffAuthenticated = (id) => authenticatedStaffIds.value.includes(Number(id));
-
         const handleStaffChange = (newId) => {
           currentStaffId.value = Number(newId);
           if (!isStaffAuthenticated(newId)) openStaffAuthModal(newId);
         };
-
         const openStaffAuthModal = (staffId) => {
           targetStaffId.value = Number(staffId);
           inputStaffPassword.value = '';
           staffAuthError.value = false;
           showStaffAuthModal.value = true;
         };
-
         const verifyStaffPassword = () => {
           const staff = staffList.value.find(s => s.id === targetStaffId.value);
-          const pwd = String(inputStaffPassword.value || '').trim();
-          if (staff && pwd === staff.password) {
+          if (staff && String(inputStaffPassword.value || '').trim() === staff.password) {
             if (!authenticatedStaffIds.value.includes(staff.id)) authenticatedStaffIds.value.push(staff.id);
             currentStaffId.value = staff.id;
             showStaffAuthModal.value = false;
-            staffAuthError.value = false;
-          } else {
-            staffAuthError.value = true;
-          }
+          } else { staffAuthError.value = true; }
         };
-
         const logoutStaff = (staffId) => {
           authenticatedStaffIds.value = authenticatedStaffIds.value.filter(id => id !== Number(staffId));
         };
-
         const getStaffNameById = (id) => {
-          const staff = staffList.value.find(s => s.id === Number(id));
-          return staff ? staff.name : '';
+          const s = staffList.value.find(x => x.id === Number(id));
+          return s ? s.name : '';
         };
 
         const openBossAuthModal = () => {
-          if (isBossAuthenticated.value) {
-            role.value = 'boss';
-          } else {
-            inputPassword.value = '';
-            authError.value = false;
-            showAuthModal.value = true;
-          }
+          if (isBossAuthenticated.value) role.value = 'boss';
+          else { inputPassword.value = ''; authError.value = false; showAuthModal.value = true; }
         };
-
         const verifyBossPassword = () => {
-          const pwd = String(inputPassword.value || '').trim();
-          if (pwd === BOSS_PASSWORD) {
+          if (String(inputPassword.value || '').trim() === BOSS_PASSWORD) {
             isBossAuthenticated.value = true;
             role.value = 'boss';
             showAuthModal.value = false;
-            authError.value = false;
-          } else {
-            authError.value = true;
-          }
+          } else { authError.value = true; }
         };
-
         const switchToStaff = () => role.value = 'staff';
         const logoutBoss = () => { isBossAuthenticated.value = false; role.value = 'staff'; };
 
         const getAvailability = (staffId, fullDate) => {
-          if (isForbidden(fullDate)) return 'available'; 
+          if (isForbidden(fullDate)) return 'available';
           return availability.value[`${Number(staffId)}_${fullDate}`] || 'available';
         };
 
         const getShift = (fullDate) => {
-          if (!shifts.value[fullDate]) {
-            shifts.value[fullDate] = { morning: ['', '', ''], evening: ['', ''] };
-          }
+          if (!shifts.value[fullDate]) shifts.value[fullDate] = { morning: ['', '', ''], evening: ['', ''] };
           return shifts.value[fullDate];
         };
 
@@ -652,36 +523,28 @@
           });
         };
 
-        const countAssigned = (fullDate, shiftType) => {
-          return getShift(fullDate)[shiftType].filter(id => id !== '' && id !== null && id !== undefined).length;
-        };
-
+        const countAssigned = (fullDate, shiftType) => getShift(fullDate)[shiftType].filter(id => id !== '' && id != null).length;
         const isShiftComplete = (fullDate) => countAssigned(fullDate, 'morning') === 3 && countAssigned(fullDate, 'evening') === 2;
 
         const getStaffName = (id) => {
-          const staff = staffList.value.find(s => s.id === Number(id));
-          if (!staff) return '';
-          const tag = staff.type === 'manager' ? '店長' : (staff.type === 'full' ? '正' : '兼');
-          return `${staff.name} (${tag})`;
+          const s = staffList.value.find(x => x.id === Number(id));
+          if (!s) return '';
+          return `${s.name} (${s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼')})`;
         };
 
         const getStatusText = (status) => ({ available: '可', off: '休', morning_only: '早', evening_only: '晚' }[status] || '可');
-
         const getBadgeClass = (status) => ({
           available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           off: 'bg-rose-50 text-rose-700 border-rose-200 font-bold',
           morning_only: 'bg-amber-50 text-amber-700 border-amber-200',
           evening_only: 'bg-purple-50 text-purple-700 border-purple-200'
         }[status] || 'bg-slate-50 text-slate-600');
-
         const getAvailabilityClass = (status) => ({
           available: 'text-emerald-700 font-bold',
           off: 'text-rose-600 font-bold',
           morning_only: 'text-amber-700 font-bold',
           evening_only: 'text-purple-700 font-bold'
         }[status] || '');
-
-        const publishSchedule = () => alert('🚀 迷客夏學府店本期班表已成功發布並同步至雲端！');
 
         return {
           role, isLoading, isBossAuthenticated, showAuthModal, inputPassword, authError,
@@ -693,7 +556,7 @@
           currentYearMonth, halfPeriod, lastDayOfCurrentMonth, currentStaffId, staffList, daysInPeriod,
           getAvailability, updateAvailability, saveShiftData, fetchCloudData,
           getShift, getAvailableStaffList, countAssigned, isShiftComplete, getStaffName, getStatusText,
-          getBadgeClass, getAvailabilityClass, publishSchedule
+          getBadgeClass, getAvailabilityClass
         };
       }
     }).mount('#app');
