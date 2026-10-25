@@ -398,7 +398,6 @@
 
     createApp({
       setup() {
-        // ⚠️ 請把下方引號內替換成您的 Google Apps Script 部署 URL ⚠️
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXxKZfhI4mQbgboMGposElDfmZoHW9SbqdPJDOAqYGbomf2JtwfwmkVqgJtYWvRVnUVA/exec';
 
         const role = ref('staff');
@@ -438,7 +437,7 @@
         const shifts = ref({});
         const forbiddenDays = ref({});
 
-        // 🌟 雲端讀取資料（已完整包含禁休抓取）
+        // 雲端讀取資料（含 forbidden 禁休狀態）
         const fetchCloudData = async () => {
           if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           isLoading.value = true;
@@ -448,7 +447,7 @@
             if (data.availability) availability.value = data.availability;
             if (data.shifts) shifts.value = data.shifts;
             if (data.deadline) deadline.value = data.deadline;
-            if (data.forbidden) forbiddenDays.value = data.forbidden; // 確保重新整理時抓回禁休狀態
+            if (data.forbidden) forbiddenDays.value = data.forbidden;
           } catch (e) {
             console.error('雲端讀取失敗:', e);
           } finally {
@@ -460,7 +459,6 @@
           fetchCloudData();
         });
 
-        // 雲端儲存截止時間
         const saveDeadline = async () => {
           if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
           try {
@@ -473,7 +471,7 @@
           }
         };
 
-        // 禁休開關切換與雲端同步
+        // 禁休切換與雲端同步
         const toggleForbidden = async (fullDate) => {
           const current = !!forbiddenDays.value[fullDate];
           forbiddenDays.value[fullDate] = !current;
@@ -493,7 +491,6 @@
           return !!forbiddenDays.value[fullDate];
         };
 
-        // 判斷是否超過截止時間（老闆不受限制）
         const isDeadlinePassed = computed(() => {
           if (!deadline.value) return false;
           const now = new Date();
@@ -507,7 +504,6 @@
           return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         };
 
-        // 雲端儲存劃假（老闆可隨時修改，員工受截止時間限制）
         const updateAvailability = async (staffId, fullDate, newStatus) => {
           if (isForbidden(fullDate)) return; 
           if (role.value === 'staff' && isDeadlinePassed.value) return; 
@@ -526,7 +522,6 @@
           }
         };
 
-        // 雲端儲存班表
         const saveShiftData = async (fullDate) => {
           const shiftData = getShift(fullDate);
           if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('YOUR_GOOGLE')) return;
@@ -546,6 +541,7 @@
           return new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
         });
 
+        // 🌟 核心修正：強制產生 YYYY-MM-DD（補零格式），確保與資料庫 100% 吻合
         const daysInPeriod = computed(() => {
           if (!currentYearMonth.value) return [];
           const [yearStr, monthStr] = currentYearMonth.value.split('-');
