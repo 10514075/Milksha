@@ -541,7 +541,7 @@
           return new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
         });
 
-        // 🌟 核心修正：強制產生 YYYY-MM-DD（補零格式），確保與資料庫 100% 吻合
+        // 🌟 核心修正：強制產生 YYYY-MM-DD（補零格式），確保與試算表 100% 吻合
         const daysInPeriod = computed(() => {
           if (!currentYearMonth.value) return [];
           const [yearStr, monthStr] = currentYearMonth.value.split('-');
