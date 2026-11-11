@@ -422,14 +422,16 @@
 
         const updateAvailability = async (staffId, fullDate, newStatus) => {
   if (isForbidden(fullDate)) return;
-  
-  // 💡 確保 fullDate 絕對是有完整年-月-日的字串，防止格式殘缺
-  if (!fullDate || fullDate.length < 10) {
-    console.error("日期格式錯誤:", fullDate);
+
+  // 💡 強制確保 date 格式絕對包含完整的日
+  const cleanDate = String(fullDate || '').trim();
+  if (cleanDate.length !== 10 || cleanDate.split('-').length !== 3) {
+    console.error("日期格式錯誤，缺少日或格式不符:", fullDate);
+    alert("日期格式異常，請重新整理頁面後再試！");
     return;
   }
 
-  const key = `${Number(staffId)}_${fullDate}`;
+  const key = `${Number(staffId)}_${cleanDate}`;
   availability.value[key] = newStatus;
   
   try {
