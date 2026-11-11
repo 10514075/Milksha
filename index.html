@@ -420,18 +420,17 @@
           return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         };
 
-        const updateAvailability = async (staffId, fullDate, newStatus) => {
-  if (isForbidden(fullDate)) return;
-
-  // 💡 強制確保 date 格式絕對包含完整的日
-  const cleanDate = String(fullDate || '').trim();
-  if (cleanDate.length !== 10 || cleanDate.split('-').length !== 3) {
-    console.error("日期格式錯誤，缺少日或格式不符:", fullDate);
-    alert("日期格式異常，請重新整理頁面後再試！");
+        const updateAvailability = async (staffId, dayObj, newStatus) => {
+  // 支援直接傳入整包 day 物件或字串，確保絕對抓得到完整的 date
+  const fullDate = typeof dayObj === 'object' ? dayObj.fullDate : dayObj;
+  
+  if (!fullDate || fullDate.length < 10) {
+    console.error("日期遺失或不完整:", dayObj);
+    alert("日期讀取異常，請重新整理頁面！");
     return;
   }
 
-  const key = `${Number(staffId)}_${cleanDate}`;
+  const key = `${Number(staffId)}_${fullDate}`;
   availability.value[key] = newStatus;
   
   try {
@@ -440,7 +439,7 @@
       body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
     });
   } catch (e) { 
-    console.error(e); 
+    console.error("儲存失敗:", e); 
   }
 };
 
