@@ -421,16 +421,26 @@
         };
 
         const updateAvailability = async (staffId, fullDate, newStatus) => {
-          if (isForbidden(fullDate)) return;
-          const key = `${Number(staffId)}_${fullDate}`;
-          availability.value[key] = newStatus;
-          try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
-            });
-          } catch (e) { console.error(e); }
-        };
+  if (isForbidden(fullDate)) return;
+  
+  // 💡 確保 fullDate 絕對是有完整年-月-日的字串，防止格式殘缺
+  if (!fullDate || fullDate.length < 10) {
+    console.error("日期格式錯誤:", fullDate);
+    return;
+  }
+
+  const key = `${Number(staffId)}_${fullDate}`;
+  availability.value[key] = newStatus;
+  
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
+    });
+  } catch (e) { 
+    console.error(e); 
+  }
+};
 
         const saveShiftData = async (fullDate) => {
           const shiftData = getShift(fullDate);
