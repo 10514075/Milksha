@@ -356,25 +356,31 @@
         const shifts = ref({});
         const forbiddenDays = ref({});
 
-        const fetchCloudData = async () => {
-          if (!GOOGLE_SCRIPT_URL) return;
-          isLoading.value = true;
-          try {
-            const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=read`);
-            const data = await res.json();
-            if (data.availability) availability.value = data.availability;
-            if (data.shifts) shifts.value = data.shifts;
-            if (data.deadline) {
-            // 把資料庫的空白轉成 T，讓 datetime-local 抓得到
-                deadline.value = data.deadline.replace(' ', 'T');
-            }
-            if (data.forbidden) forbiddenDays.value = data.forbidden;
-          } catch (e) {
-            console.error('雲端讀取失敗:', e);
-          } finally {
-            isLoading.value = false;
-          }
-        };
+   const fetchCloudData = async () => {
+  if (!GOOGLE_SCRIPT_URL) return;
+  isLoading.value = true;
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL);
+    const data = await res.json();
+    
+    if (data.availability) {
+      availability.value = data.availability;
+    }
+    if (data.shifts) {
+      shifts.value = data.shifts;
+    }
+    if (data.deadline) {
+      deadline.value = data.deadline.replace(' ', 'T');
+    }
+    if (data.forbidden) {
+      forbiddenDays.value = data.forbidden;
+    }
+  } catch (e) {
+    console.error('雲端讀取失敗:', e);
+  } finally {
+    isLoading.value = false;
+  }
+};
 
         onMounted(() => { fetchCloudData(); });
 
