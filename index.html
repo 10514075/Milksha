@@ -316,282 +316,284 @@
 
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
-
-    createApp({
-      setup() {
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXxKZfhI4mQbgboMGposElDfmZoHW9SbqdPJDOAqYGbomf2JtwfwmkVqgJtYWvRVnUVA/exec';
-
-        const role = ref('staff');
-        const isLoading = ref(false);
-        const isBossAuthenticated = ref(false);
-        const showAuthModal = ref(false);
-        const inputPassword = ref('');
-        const authError = ref(false);
-        const BOSS_PASSWORD = '5555';
-
-        const deadline = ref('');
-        const authenticatedStaffIds = ref([]);
-        const showStaffAuthModal = ref(false);
-        const targetStaffId = ref(null);
-        const inputStaffPassword = ref('');
-        const staffAuthError = ref(false);
-
-        const today = new Date();
-        const currentYearMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
-        const halfPeriod = ref(today.getDate() <= 15 ? '1' : '2');
-        const currentStaffId = ref(0);
-
-        const staffList = ref([
-          { id: 0, name: '店長', type: 'manager', password: '0000' },
-          { id: 1, name: '美蓁', type: 'full', password: '0212' },
-          { id: 2, name: '思博', type: 'part', password: '0807' },
-          { id: 3, name: '以昕', type: 'part', password: '1121' },
-          { id: 4, name: '玟璇', type: 'part', password: '0226' },
-          { id: 5, name: '紀穎', type: 'part', password: '0926' },
-          { id: 6, name: '家琪', type: 'part', password: '0512' },
-          { id: 7, name: '志穎', type: 'part', password: '1234' }
-        ]);
-
-        const availability = ref({});
-        const shifts = ref({});
-        const forbiddenDays = ref({});
-
-   const fetchCloudData = async () => {
-  if (!GOOGLE_SCRIPT_URL) return;
-  isLoading.value = true;
-  try {
-    const res = await fetch(GOOGLE_SCRIPT_URL);
-    const data = await res.json();
+createApp({
+  setup() {
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXxKZfhI4mQbgboMGposElDfmZoHW9SbqdPJDOAqYGbomf2JtwfwmkVqgJtYWvRVnUVA/exec';
+    const role = ref('staff');
+    const isLoading = ref(false);
+    const isBossAuthenticated = ref(false);
+    const showAuthModal = ref(false);
+    const inputPassword = ref('');
+    const authError = ref(false);
+    const BOSS_PASSWORD = '5555';
     
-    if (data.availability) {
-      availability.value = data.availability;
-    }
-    if (data.shifts) {
-      shifts.value = data.shifts;
-    }
+    // 嚴格確保 deadline 初始值為單純的字串
+    const deadline = ref('');
     
-    // 嚴格處理 deadline，避免任何 NaN
-    if (data.deadline) {
-      let val = String(data.deadline).trim();
-      if (val && !val.includes("NaN")) {
-        deadline.value = val.replace(' ', 'T').substring(0, 16);
-      } else {
-        deadline.value = '';
-      }
-    } else {
-      deadline.value = '';
-    }
+    const authenticatedStaffIds = ref([]);
+    const showStaffAuthModal = ref(false);
+    const targetStaffId = ref(null);
+    const inputStaffPassword = ref('');
+    const staffAuthError = ref(false);
+    const today = new Date();
+    const currentYearMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
+    const halfPeriod = ref(today.getDate() <= 15 ? '1' : '2');
+    const currentStaffId = ref(0);
+    const staffList = ref([
+      { id: 0, name: '店長', type: 'manager', password: '0000' },
+      { id: 1, name: '美蓁', type: 'full', password: '0212' },
+      { id: 2, name: '思博', type: 'part', password: '0807' },
+      { id: 3, name: '以昕', type: 'part', password: '1121' },
+      { id: 4, name: '玟璇', type: 'part', password: '0226' },
+      { id: 5, name: '紀穎', type: 'part', password: '0926' },
+      { id: 6, name: '家琪', type: 'part', password: '0512' },
+      { id: 7, name: '志穎', type: 'part', password: '1234' }
+    ]);
+    const availability = ref({});
+    const shifts = ref({});
+    const forbiddenDays = ref({});
 
-    if (data.forbidden) {
-      forbiddenDays.value = data.forbidden;
-    }
-  } catch (e) {
-    console.error('雲端讀取失敗:', e);
-  } finally {
-    isLoading.value = false;
-  }
-};
+    const fetchCloudData = async () => {
+      if (!GOOGLE_SCRIPT_URL) return;
+      isLoading.value = true;
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL);
+        const data = await res.json();
+        
+        if (data.availability) availability.value = data.availability;
+        if (data.shifts) shifts.value = data.shifts;
+        if (data.forbidden) forbiddenDays.value = data.forbidden;
 
-        onMounted(() => { fetchCloudData(); });
-
-        const saveDeadline = async () => {
-          try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'saveDeadline', val: deadline.value })
-            });
-            // 儲存後立即重新讀取雲端，確保狀態同步不跳掉
-            await fetchCloudData();
-          } catch (e) { console.error(e); }
-        };
-
-        const toggleForbidden = async (fullDate) => {
-          const current = !!forbiddenDays.value[fullDate];
-          forbiddenDays.value[fullDate] = !current;
-
-          try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'saveForbidden', key: fullDate, val: String(!current) })
-            });
-          } catch (e) { console.error(e); }
-        };
-
-        const isForbidden = (fullDate) => !!forbiddenDays.value[fullDate];
-
-        const isDeadlinePassed = computed(() => {
-          if (!deadline.value) return false;
-          return new Date() > new Date(deadline.value);
-        });
-
-        const formatDeadline = (isoStr) => {
-          if (!isoStr) return '';
-          const d = new Date(isoStr);
-          return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        };
-
-        const updateAvailability = async (staffId, dayObj, newStatus) => {
-  // 支援直接傳入整包 day 物件或字串，確保絕對抓得到完整的 date
-  const fullDate = typeof dayObj === 'object' ? dayObj.fullDate : dayObj;
-  
-  if (!fullDate || fullDate.length < 10) {
-    console.error("日期遺失或不完整:", dayObj);
-    alert("日期讀取異常，請重新整理頁面！");
-    return;
-  }
-
-  const key = `${Number(staffId)}_${fullDate}`;
-  availability.value[key] = newStatus;
-  
-  try {
-    await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
-    });
-  } catch (e) { 
-    console.error("儲存失敗:", e); 
-  }
-};
-
-        const saveShiftData = async (fullDate) => {
-          const shiftData = getShift(fullDate);
-          try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'saveShift', key: fullDate, val: shiftData })
-            });
-          } catch (e) { console.error(e); }
-        };
-
-        const lastDayOfCurrentMonth = computed(() => {
-          if (!currentYearMonth.value) return 31;
-          const [y, m] = currentYearMonth.value.split('-');
-          return new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
-        });
-
-        const daysInPeriod = computed(() => {
-          if (!currentYearMonth.value) return [];
-          const [yStr, mStr] = currentYearMonth.value.split('-');
-          const year = parseInt(yStr, 10);
-          const month = parseInt(mStr, 10) - 1;
-          const totalDays = new Date(year, month + 1, 0).getDate();
-          const start = halfPeriod.value === '1' ? 1 : 16;
-          const end = halfPeriod.value === '1' ? 15 : totalDays;
-          const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
-          const days = [];
-
-          for (let i = start; i <= end; i++) {
-            const dateObj = new Date(year, month, i);
-            const m = String(month + 1).padStart(2, '0');
-            const d = String(i).padStart(2, '0');
-            days.push({
-              fullDate: `${year}-${m}-${d}`,
-              dateStr: `${m}/${d}`,
-              dayOfWeek: weekMap[dateObj.getDay()],
-              isWeekend: dateObj.getDay() === 0 || dateObj.getDay() === 6
-            });
+        // 徹底防堵 NaN 的極致防呆處理
+        if (data.deadline !== undefined && data.deadline !== null && data.deadline !== "") {
+          let val = String(data.deadline).trim();
+          if (val && !val.includes("NaN") && val !== "NaN/NaN/NaN NaN:NaN") {
+            let formatted = val.replace(' ', 'T');
+            if (formatted.endsWith('Z')) formatted = formatted.slice(0, -1);
+            if (formatted.length > 16) formatted = formatted.substring(0, 16);
+            deadline.value = formatted;
+          } else {
+            deadline.value = '';
           }
-          return days;
-        });
-
-        const isStaffAuthenticated = (id) => authenticatedStaffIds.value.includes(Number(id));
-        const handleStaffChange = (newId) => {
-          currentStaffId.value = Number(newId);
-          if (!isStaffAuthenticated(newId)) openStaffAuthModal(newId);
-        };
-        const openStaffAuthModal = (staffId) => {
-          targetStaffId.value = Number(staffId);
-          inputStaffPassword.value = '';
-          staffAuthError.value = false;
-          showStaffAuthModal.value = true;
-        };
-        const verifyStaffPassword = () => {
-          const staff = staffList.value.find(s => s.id === targetStaffId.value);
-          if (staff && String(inputStaffPassword.value || '').trim() === staff.password) {
-            if (!authenticatedStaffIds.value.includes(staff.id)) authenticatedStaffIds.value.push(staff.id);
-            currentStaffId.value = staff.id;
-            showStaffAuthModal.value = false;
-          } else { staffAuthError.value = true; }
-        };
-        const logoutStaff = (staffId) => {
-          authenticatedStaffIds.value = authenticatedStaffIds.value.filter(id => id !== Number(staffId));
-        };
-        const getStaffNameById = (id) => {
-          const s = staffList.value.find(x => x.id === Number(id));
-          return s ? s.name : '';
-        };
-
-        const openBossAuthModal = () => {
-          if (isBossAuthenticated.value) role.value = 'boss';
-          else { inputPassword.value = ''; authError.value = false; showAuthModal.value = true; }
-        };
-        const verifyBossPassword = () => {
-          if (String(inputPassword.value || '').trim() === BOSS_PASSWORD) {
-            isBossAuthenticated.value = true;
-            role.value = 'boss';
-            showAuthModal.value = false;
-          } else { authError.value = true; }
-        };
-        const switchToStaff = () => role.value = 'staff';
-        const logoutBoss = () => { isBossAuthenticated.value = false; role.value = 'staff'; };
-
-        const getAvailability = (staffId, fullDate) => {
-          if (isForbidden(fullDate)) return 'available';
-          return availability.value[`${Number(staffId)}_${fullDate}`] || 'available';
-        };
-
-        const getShift = (fullDate) => {
-          if (!shifts.value[fullDate]) shifts.value[fullDate] = { morning: ['', '', ''], evening: ['', ''] };
-          return shifts.value[fullDate];
-        };
-
-        const getAvailableStaffList = (fullDate, shiftType) => {
-          return staffList.value.filter(s => {
-            const status = getAvailability(s.id, fullDate);
-            if (status === 'off') return false;
-            if (shiftType === 'morning' && status === 'evening_only') return false;
-            if (shiftType === 'evening' && status === 'morning_only') return false;
-            return true;
-          });
-        };
-
-        const countAssigned = (fullDate, shiftType) => getShift(fullDate)[shiftType].filter(id => id !== '' && id != null).length;
-        const isShiftComplete = (fullDate) => countAssigned(fullDate, 'morning') === 3 && countAssigned(fullDate, 'evening') === 2;
-
-        const getStaffName = (id) => {
-          const s = staffList.value.find(x => x.id === Number(id));
-          if (!s) return '';
-          return `${s.name} (${s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼')})`;
-        };
-
-        const getStatusText = (status) => ({ available: '可', off: '休', morning_only: '早', evening_only: '晚' }[status] || '可');
-        const getBadgeClass = (status) => ({
-          available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-          off: 'bg-rose-50 text-rose-700 border-rose-200 font-bold',
-          morning_only: 'bg-amber-50 text-amber-700 border-amber-200',
-          evening_only: 'bg-purple-50 text-purple-700 border-purple-200'
-        }[status] || 'bg-slate-50 text-slate-600');
-        const getAvailabilityClass = (status) => ({
-          available: 'text-emerald-700 font-bold',
-          off: 'text-rose-600 font-bold',
-          morning_only: 'text-amber-700 font-bold',
-          evening_only: 'text-purple-700 font-bold'
-        }[status] || '');
-
-        return {
-          role, isLoading, isBossAuthenticated, showAuthModal, inputPassword, authError,
-          openBossAuthModal, verifyBossPassword, switchToStaff, logoutBoss,
-          deadline, saveDeadline, isDeadlinePassed, formatDeadline,
-          forbiddenDays, toggleForbidden, isForbidden,
-          authenticatedStaffIds, showStaffAuthModal, targetStaffId, inputStaffPassword, staffAuthError,
-          isStaffAuthenticated, handleStaffChange, openStaffAuthModal, verifyStaffPassword, logoutStaff, getStaffNameById,
-          currentYearMonth, halfPeriod, lastDayOfCurrentMonth, currentStaffId, staffList, daysInPeriod,
-          getAvailability, updateAvailability, saveShiftData, fetchCloudData,
-          getShift, getAvailableStaffList, countAssigned, isShiftComplete, getStaffName, getStatusText,
-          getBadgeClass, getAvailabilityClass
-        };
+        } else {
+          deadline.value = '';
+        }
+      } catch (e) {
+        console.error('雲端讀取失敗:', e);
+      } finally {
+        isLoading.value = false;
       }
-    }).mount('#app');
+    };
+
+    onMounted(() => {
+      fetchCloudData();
+    });
+
+    const saveDeadline = async () => {
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveDeadline', val: deadline.value })
+        });
+        await fetchCloudData();
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const toggleForbidden = async (fullDate) => {
+      const current = !!forbiddenDays.value[fullDate];
+      forbiddenDays.value[fullDate] = !current;
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveForbidden', key: fullDate, val: String(!current) })
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const isForbidden = (fullDate) => !!forbiddenDays.value[fullDate];
+
+    const isDeadlinePassed = computed(() => {
+      if (!deadline.value) return false;
+      return new Date() > new Date(deadline.value);
+    });
+
+    const formatDeadline = (isoStr) => {
+      if (!isoStr || isoStr.includes("NaN")) return '';
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '';
+      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const updateAvailability = async (staffId, dayObj, newStatus) => {
+      const fullDate = typeof dayObj === 'object' ? dayObj.fullDate : dayObj;
+      if (!fullDate || fullDate.length < 10) return;
+      const key = `${Number(staffId)}_${fullDate}`;
+      availability.value[key] = newStatus;
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveAvail', key: key, val: newStatus })
+        });
+      } catch (e) {
+        console.error("儲存失敗:", e);
+      }
+    };
+
+    const saveShiftData = async (fullDate) => {
+      const shiftData = getShift(fullDate);
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveShift', key: fullDate, val: shiftData })
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const lastDayOfCurrentMonth = computed(() => {
+      if (!currentYearMonth.value) return 31;
+      const [y, m] = currentYearMonth.value.split('-');
+      return new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
+    });
+
+    const daysInPeriod = computed(() => {
+      if (!currentYearMonth.value) return [];
+      const [yStr, mStr] = currentYearMonth.value.split('-');
+      const year = parseInt(yStr, 10);
+      const month = parseInt(mStr, 10) - 1;
+      const totalDays = new Date(year, month + 1, 0).getDate();
+      const start = halfPeriod.value === '1' ? 1 : 16;
+      const end = halfPeriod.value === '1' ? 15 : totalDays;
+      const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
+      const days = [];
+      for (let i = start; i <= end; i++) {
+        const dateObj = new Date(year, month, i);
+        const m = String(month + 1).padStart(2, '0');
+        const d = String(i).padStart(2, '0');
+        days.push({
+          fullDate: `${year}-${m}-${d}`,
+          dateStr: `${m}/${d}`,
+          dayOfWeek: weekMap[dateObj.getDay()],
+          isWeekend: dateObj.getDay() === 0 || dateObj.getDay() === 6
+        });
+      }
+      return days;
+    });
+
+    const isStaffAuthenticated = (id) => authenticatedStaffIds.value.includes(Number(id));
+    const handleStaffChange = (newId) => {
+      currentStaffId.value = Number(newId);
+      if (!isStaffAuthenticated(newId)) openStaffAuthModal(newId);
+    };
+    const openStaffAuthModal = (staffId) => {
+      targetStaffId.value = Number(staffId);
+      inputStaffPassword.value = '';
+      staffAuthError.value = false;
+      showStaffAuthModal.value = true;
+    };
+    const verifyStaffPassword = () => {
+      const staff = staffList.value.find(s => s.id === targetStaffId.value);
+      if (staff && String(inputStaffPassword.value || '').trim() === staff.password) {
+        if (!authenticatedStaffIds.value.includes(staff.id)) authenticatedStaffIds.value.push(staff.id);
+        currentStaffId.value = staff.id;
+        showStaffAuthModal.value = false;
+      } else {
+        staffAuthError.value = true;
+      }
+    };
+    const logoutStaff = (staffId) => {
+      authenticatedStaffIds.value = authenticatedStaffIds.value.filter(id => id !== Number(staffId));
+    };
+
+    const openBossAuthModal = () => {
+      if (isBossAuthenticated.value) role.value = 'boss';
+      else {
+        inputPassword.value = '';
+        authError.value = false;
+        showAuthModal.value = true;
+      }
+    };
+    const verifyBossPassword = () => {
+      if (String(inputPassword.value || '').trim() === BOSS_PASSWORD) {
+        isBossAuthenticated.value = true;
+        role.value = 'boss';
+        showAuthModal.value = false;
+      } else {
+        authError.value = true;
+      }
+    };
+    const switchToStaff = () => role.value = 'staff';
+    const logoutBoss = () => {
+      isBossAuthenticated.value = false;
+      role.value = 'staff';
+    };
+
+    const getAvailability = (staffId, fullDate) => {
+      if (isForbidden(fullDate)) return 'available';
+      return availability.value[`${Number(staffId)}_${fullDate}`] || 'available';
+    };
+
+    const getShift = (fullDate) => {
+      if (!shifts.value[fullDate]) shifts.value[fullDate] = { morning: ['', '', ''], evening: ['', ''] };
+      return shifts.value[fullDate];
+    };
+
+    const getAvailableStaffList = (fullDate, shiftType) => {
+      return staffList.value.filter(s => {
+        const status = getAvailability(s.id, fullDate);
+        if (status === 'off') return false;
+        if (shiftType === 'morning' && status === 'evening_only') return false;
+        if (shiftType === 'evening' && status === 'morning_only') return false;
+        return true;
+      });
+    };
+
+    const countAssigned = (fullDate, shiftType) => getShift(fullDate)[shiftType].filter(id => id !== '' && id != null).length;
+    const isShiftComplete = (fullDate) => countAssigned(fullDate, 'morning') === 3 && countAssigned(fullDate, 'evening') === 2;
+
+    const getStaffName = (id) => {
+      const s = staffList.value.find(x => x.id === Number(id));
+      if (!s) return '';
+      return `${s.name} (${s.type === 'manager' ? '店長' : (s.type === 'full' ? '正' : '兼')})`;
+    };
+
+    const getStatusText = (status) => ({
+      available: '可', off: '休', morning_only: '早', evening_only: '晚'
+    }[status] || '可');
+
+    const getBadgeClass = (status) => ({
+      available: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      off: 'bg-rose-50 text-rose-700 border-rose-200 font-bold',
+      morning_only: 'bg-amber-50 text-amber-700 border-amber-200',
+      evening_only: 'bg-purple-50 text-purple-700 border-purple-200'
+    }[status] || 'bg-slate-50 text-slate-600');
+
+    const getAvailabilityClass = (status) => ({
+      available: 'text-emerald-700 font-bold',
+      off: 'text-rose-600 font-bold',
+      morning_only: 'text-amber-700 font-bold',
+      evening_only: 'text-purple-700 font-bold'
+    }[status] || '');
+
+    return {
+      role, isLoading, isBossAuthenticated, showAuthModal, inputPassword, authError,
+      openBossAuthModal, verifyBossPassword, switchToStaff, logoutBoss,
+      deadline, saveDeadline, isDeadlinePassed, formatDeadline,
+      forbiddenDays, toggleForbidden, isForbidden,
+      authenticatedStaffIds, showStaffAuthModal, targetStaffId, inputStaffPassword, staffAuthError,
+      isStaffAuthenticated, handleStaffChange, openStaffAuthModal, verifyStaffPassword, logoutStaff,
+      currentYearMonth, halfPeriod, lastDayOfCurrentMonth, currentStaffId, staffList, daysInPeriod,
+      getAvailability, updateAvailability, saveShiftData, fetchCloudData,
+      getShift, getAvailableStaffList, countAssigned, isShiftComplete,
+      getStaffName, getStatusText, getBadgeClass, getAvailabilityClass
+    };
+  }
+}).mount('#app');
   </script>
 </body>
 </html>
