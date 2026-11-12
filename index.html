@@ -370,8 +370,16 @@
       shifts.value = data.shifts;
     }
     if (data.deadline) {
-      deadline.value = data.deadline.replace(' ', 'T');
-    }
+  // 檢查字串是否有效，避免帶入空值或格式錯誤造成 NaN
+  const cleanDeadline = String(data.deadline).trim();
+  if (cleanDeadline && cleanDeadline !== "NaN/NaN/NaN NaN:NaN") {
+    deadline.value = cleanDeadline.replace(' ', 'T');
+  } else {
+    deadline.value = '';
+  }
+} else {
+  deadline.value = '';
+}
     if (data.forbidden) {
       forbiddenDays.value = data.forbidden;
     }
