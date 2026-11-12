@@ -369,24 +369,19 @@
     if (data.shifts) {
       shifts.value = data.shifts;
     }
-if (data.deadline !== undefined && data.deadline !== null) {
-      let cleanDeadline = String(data.deadline).trim();
-      if (cleanDeadline && !cleanDeadline.includes("NaN") && cleanDeadline !== "") {
-        // 將標準 ISO 或包含空白的字串轉成 datetime-local 所需的 YYYY-MM-DDTHH:mm
-        cleanDeadline = cleanDeadline.replace(' ', 'T');
-        if (cleanDeadline.endsWith('Z')) {
-          cleanDeadline = cleanDeadline.slice(0, -1);
-        }
-        if (cleanDeadline.length > 16) {
-          cleanDeadline = cleanDeadline.substring(0, 16);
-        }
-        deadline.value = cleanDeadline;
+    
+    // 嚴格處理 deadline，避免任何 NaN
+    if (data.deadline) {
+      let val = String(data.deadline).trim();
+      if (val && !val.includes("NaN")) {
+        deadline.value = val.replace(' ', 'T').substring(0, 16);
       } else {
         deadline.value = '';
       }
     } else {
       deadline.value = '';
     }
+
     if (data.forbidden) {
       forbiddenDays.value = data.forbidden;
     }
