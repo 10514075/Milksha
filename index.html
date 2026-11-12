@@ -364,25 +364,25 @@ createApp({
         if (data.shifts) shifts.value = data.shifts;
         if (data.forbidden) forbiddenDays.value = data.forbidden;
 
-      // 徹底確保 deadline 能夠被 input 正確讀取
-if (data.deadline) {
-  let val = String(data.deadline).trim();
-  // 把中間的空白換成 'T'
-  val = val.replace(' ', 'T');
-  // 如果時間部分的分鐘是一位數（例如 2026-11-13T3:14），把它補齊為兩位數
-  let parts = val.split('T');
-  if (parts.length === 2 && parts[1]) {
-    let timeParts = parts[1].split(':');
-    if (timeParts.length === 2) {
-      let hh = timeParts[0].padStart(2, '0');
-      let mm = timeParts[1].padStart(2, '0');
-      val = `${parts[0]}T${hh}:${mm}`;
-    }
-  }
-  deadline.value = val;
-} else {
-  deadline.value = '';
-}
+    // 徹底確保 deadline 能夠被 input 正確讀取
+        if (data.deadline) {
+          let val = String(data.deadline).trim();
+          // 把中間的空白換成 'T'
+          val = val.replace(' ', 'T');
+          // 如果時間部分的分鐘是一位數（例如 2026-11-13T3:14），把它補齊為兩位數
+          let parts = val.split('T');
+          if (parts.length === 2 && parts[1]) {
+            let timeParts = parts[1].split(':');
+            if (timeParts.length === 2) {
+              let hh = timeParts[0].padStart(2, '0');
+              let mm = timeParts[1].padStart(2, '0');
+              val = `${parts[0]}T${hh}:${mm}`;
+            }
+          }
+          deadline.value = val;
+        } else {
+          deadline.value = '';
+        }
       } catch (e) {
         console.error('雲端讀取失敗:', e);
       } finally {
