@@ -108,7 +108,7 @@
           type="datetime-local" 
           v-model="deadline" 
           @change="saveDeadline"
-          class="border border-indigo-300 rounded-lg px-3 py-1.5 bg-white text-sm font-medium focus:outline-indigo-500" />
+          class="border border-indigo-300 rounded-lg px-3 py-1.5 bg-white text-sm font-medium focus:outline-indigo-500 w-full" />
       </div>
       <div class="text-xs text-indigo-600">
         <span v-if="deadline">當前截止：<strong>{{ formatDeadline(deadline) }}</strong></span>
