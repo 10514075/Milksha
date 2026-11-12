@@ -369,15 +369,13 @@
     if (data.shifts) {
       shifts.value = data.shifts;
     }
-    if (data.deadline) {
-  const cleanDeadline = String(data.deadline).trim();
-  // 檢查如果不是 NaN，就直接將字串賦值或做標準格式轉換
-  if (cleanDeadline && !cleanDeadline.includes("NaN")) {
-    // 確保符合 datetime-local 的 YYYY-MM-DDTHH:mm 格式
-    deadline.value = cleanDeadline.replace(' ', 'T');
-  } else {
-    deadline.value = '';
-  }
+// 不管有沒有抓到 deadline，都強制進行乾淨的格式化與防呆
+const cleanDeadline = data.deadline ? String(data.deadline).trim() : '';
+
+if (cleanDeadline && !cleanDeadline.includes("NaN") && cleanDeadline !== "") {
+  deadline.value = cleanDeadline.replace(' ', 'T');
+} else {
+  deadline.value = '';
 }
     if (data.forbidden) {
       forbiddenDays.value = data.forbidden;
