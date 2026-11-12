@@ -369,11 +369,18 @@
     if (data.shifts) {
       shifts.value = data.shifts;
     }
-// 不管有沒有抓到 deadline，都強制進行乾淨的格式化與防呆
-const cleanDeadline = data.deadline ? String(data.deadline).trim() : '';
-
-if (cleanDeadline && !cleanDeadline.includes("NaN") && cleanDeadline !== "") {
-  deadline.value = cleanDeadline.replace(' ', 'T');
+if (data.deadline) {
+  let cleanDeadline = String(data.deadline).trim();
+  if (cleanDeadline && !cleanDeadline.includes("NaN")) {
+    // 確保把中間的空格換成 'T'，並切掉可能多餘的秒數或時區，符合 datetime-local 格式
+    cleanDeadline = cleanDeadline.replace(' ', 'T');
+    if (cleanDeadline.length > 16) {
+      cleanDeadline = cleanDeadline.substring(0, 16);
+    }
+    deadline.value = cleanDeadline;
+  } else {
+    deadline.value = '';
+  }
 } else {
   deadline.value = '';
 }
